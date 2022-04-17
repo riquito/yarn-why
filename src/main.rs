@@ -1,5 +1,6 @@
 use anyhow::Result;
-use std::io::{BufRead, Write};
+use std::io::{BufRead, Read, Write};
+use yarn_lock_parser::{parse_str, Entry};
 
 const HELP: &str = concat!(
     "yarn-why ",
@@ -14,20 +15,19 @@ LICENSE: GPL-3.0-or-later
 "
 );
 
+
 fn main() -> Result<()> {
     let stdin = std::io::stdin();
-    let stdin = std::io::BufReader::with_capacity(32 * 1024, stdin.lock());
+    let mut stdin = std::io::BufReader::with_capacity(32 * 1024, stdin.lock());
 
     let stdout = std::io::stdout();
     let mut stdout = std::io::BufWriter::with_capacity(32 * 1024, stdout.lock());
 
-    stdin
-        .lines()
-        .try_for_each::<_, Result<()>>(|maybe_line| -> Result<()> {
-            stdout.write_all(maybe_line?.as_bytes())?;
-            stdout.write_all(&[b'\n'])?;
-            Ok(())
-        })?;
+    let mut yarnLockText: Vec<u8> = Vec::new();
+    stdin.read_to_end(&mut yarnLockText)?;
+
+    let entries = parse_str(std::str::from_utf8(&yarnLockText)?);
+    println!("{:?}", &entries);
 
     stdout.flush()?;
 
