@@ -4,17 +4,28 @@ use std::io::{Read, Write};
 use yarn_lock_parser::{parse_str, Entry};
 
 const HELP: &str = concat!(
-    "yarn-why ",
+    "Like `yarn why`, but fast",
     env!("CARGO_PKG_VERSION"),
-    "
-Find why you have a dependency, fast
-
+    r#"
 USAGE:
-    yarn-why [FLAGS] [OPTIONS] < yarn.lock
+    yarn-why [FLAGS] [OPTIONS] package < yarn.lock
+
+FLAGS:
+    -V, --version                 Prints version information
+    -h, --help                    Prints this help and exit
+
+ARGS:
+    package                       Package to query for
 
 LICENSE: GPL-3.0-or-later
-"
+"#
 );
+
+#[derive(Debug)]
+struct Opt {
+    version: bool,
+    query: String,
+}
 
 type Pkg<'a> = (&'a str, &'a str);
 
@@ -37,6 +48,31 @@ fn tree<'a>(
 }
 
 fn main() -> Result<()> {
+    let mut pargs = pico_args::Arguments::from_env();
+
+    if pargs.contains(["-h", "--help"]) {
+        print!("{}", HELP);
+        std::process::exit(0);
+    }
+
+    let args = Opt {
+        version: pargs.contains(["-V", "--version"]),
+        query: pargs.free_from_str()?,
+    };
+
+    let remaining = pargs.finish();
+
+    if !remaining.is_empty() {
+        eprintln!("yarn-why: unexpected arguments {:?}", remaining);
+        eprintln!("Try 'yarn-why --help' for more information.");
+        std::process::exit(1);
+    }
+
+    if args.version {
+        println!("yarn-why {}", env!("CARGO_PKG_VERSION"));
+        std::process::exit(0);
+    }
+
     let stdin = std::io::stdin();
     let mut stdin = std::io::BufReader::with_capacity(32 * 1024, stdin.lock());
 
@@ -68,7 +104,10 @@ fn main() -> Result<()> {
         }
     }
 
-    let q = ("lodash.get", "^4.4.2");
+    let q = args
+        .query
+        .rsplit_once('@')
+        .expect("query format is package@version");
     let mut curr_path: Vec<&Pkg> = Vec::new();
     let mut paths: Vec<Vec<&Pkg>> = Vec::new();
     tree(&q, &parents, &mut curr_path, &mut paths);
