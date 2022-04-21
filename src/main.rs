@@ -1,7 +1,7 @@
 use anyhow::Result;
 use std::collections::HashMap;
 use std::io::{Read, Write};
-use yarn_lock_parser::parse_str;
+use yarn_lock_parser::{parse_str, Entry};
 
 const HELP: &str = concat!(
     "Like `yarn why`, but fast",
@@ -51,6 +51,7 @@ fn tree<'a>(
 fn why<'a>(
     queries: Vec<&'a Pkg>,
     pkg2parents: &'a HashMap<&'a Pkg<'a>, Vec<&'a Pkg<'a>>>,
+    entries: &Vec<Entry>,
 ) -> Vec<Vec<&'a Pkg<'a>>> {
     if queries.is_empty() || pkg2parents.is_empty() {
         return Vec::new();
@@ -60,6 +61,19 @@ fn why<'a>(
     for q in queries.iter() {
         let mut curr_path: Vec<&Pkg> = Vec::new();
         tree(q, pkg2parents, &mut curr_path, &mut paths);
+    }
+
+    if paths.len() == 1 && paths.get(0).unwrap().len() == 1 {
+        // It's either direct dependency or mistyped
+        // (pkg2parents does not contain entries without parents)
+        let q = queries.get(0).unwrap();
+        for e in entries {
+            if e.name == q.0 && e.descriptors.contains(q) {
+                return paths;
+            }
+        }
+
+        paths = Vec::new();
     }
 
     paths
@@ -145,7 +159,7 @@ fn main() -> Result<()> {
     }
 
 
-    let paths = why(queries, &pkg2parents);
+    let paths = why(queries, &pkg2parents, &entries);
 
     if paths.is_empty() {
         println!("Package not found");
