@@ -118,14 +118,20 @@ fn main() -> Result<()> {
         std::process::exit(0);
     }
 
-    let stdin = std::io::stdin();
-    let mut stdin = std::io::BufReader::with_capacity(32 * 1024, stdin.lock());
+    let mut yarn_lock_text: Vec<u8> = Vec::new();
+
+    if atty::is(atty::Stream::Stdin) {
+        let mut f = std::fs::File::open("yarns.lock")
+            .map_err(|e| anyhow!("Cannot open yarn.lock: {}", e))?;
+        f.read_to_end(&mut yarn_lock_text)?;
+    } else {
+        let stdin = std::io::stdin();
+        let mut stdin = std::io::BufReader::with_capacity(32 * 1024, stdin.lock());
+        stdin.read_to_end(&mut yarn_lock_text)?;
+    }
 
     let stdout = std::io::stdout();
     let mut stdout = std::io::BufWriter::with_capacity(32 * 1024, stdout.lock());
-
-    let mut yarn_lock_text: Vec<u8> = Vec::new();
-    stdin.read_to_end(&mut yarn_lock_text)?;
 
     let mut queries: Vec<&(&str, &str)> = Vec::new();
 
