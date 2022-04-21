@@ -1,7 +1,7 @@
 use anyhow::Result;
 use std::collections::HashMap;
 use std::io::{Read, Write};
-use yarn_lock_parser::{parse_str, Entry};
+use yarn_lock_parser::parse_str;
 
 const HELP: &str = concat!(
     "Like `yarn why`, but fast",
@@ -83,24 +83,18 @@ fn main() -> Result<()> {
     stdin.read_to_end(&mut yarn_lock_text)?;
 
     let entries = parse_str(std::str::from_utf8(&yarn_lock_text)?)?;
-    let mut descriptor2entry: HashMap<&(&str, &str), &Entry> = HashMap::new();
 
-    // Build a map descriptor => entry
-    // (entries can have multiple descriptors).
-    for e in entries.iter() {
-        for d in e.descriptors.iter() {
-            descriptor2entry.insert(d, e);
-        }
     }
 
-    let mut parents: HashMap<&(&str, &str), Vec<&(&str, &str)>> = HashMap::new();
+    // Build a map descriptor => parent
+    let mut pkg2parents: HashMap<&(&str, &str), Vec<&(&str, &str)>> = HashMap::new();
     for e in entries.iter() {
         for dep in e.dependencies.iter() {
             let mut dep_parents: Vec<&(&str, &str)> = Vec::new();
             for d in e.descriptors.iter() {
                 dep_parents.push(d);
             }
-            parents.insert(dep, dep_parents);
+            pkg2parents.insert(dep, dep_parents);
         }
     }
 
