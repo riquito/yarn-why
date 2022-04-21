@@ -43,7 +43,9 @@ fn tree<'a>(
             tree(p, pkg2parents, curr_path, paths);
         }
     } else {
-        paths.push(curr_path.clone());
+        let mut res = curr_path.clone();
+        res.reverse();
+        paths.push(res);
         curr_path.pop();
     }
 }
@@ -174,8 +176,12 @@ fn main() -> Result<()> {
         std::process::exit(1);
     }
 
-    for k in paths.iter() {
-        println!("{:?}", k);
+    for p in paths.iter() {
+        let mut depth = 0;
+        for elem in p.iter() {
+            println!("{:indent$}{}@{}", "", elem.0, elem.1, indent = depth);
+            depth += 3;
+        }
     }
 
     stdout.flush()?;
