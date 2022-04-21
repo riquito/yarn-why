@@ -47,6 +47,17 @@ fn tree<'a>(
     }
 }
 
+fn get_descriptor_from_cli_arg(arg: &str) -> Option<(&str, &str)> {
+    if let Some(idx) = arg.rfind('@') {
+        // skip @foo/bar, keep @foo/bar@1.0.0
+        if idx > 0 {
+            return Some((&arg[0..idx], &arg[idx + 1..]));
+        }
+    }
+
+    None
+}
+
 fn main() -> Result<()> {
     let mut pargs = pico_args::Arguments::from_env();
 
@@ -82,9 +93,18 @@ fn main() -> Result<()> {
     let mut yarn_lock_text: Vec<u8> = Vec::new();
     stdin.read_to_end(&mut yarn_lock_text)?;
 
-    let entries = parse_str(std::str::from_utf8(&yarn_lock_text)?)?;
+    let mut queries: Vec<&(&str, &str)> = Vec::new();
 
+    let maybe_cli_descriptor = get_descriptor_from_cli_arg(&args.query);
+    let search_for_descriptors = maybe_cli_descriptor.is_none();
+    let cli_descriptor: (&str, &str);
+
+    if let Some(d) = maybe_cli_descriptor {
+        cli_descriptor = d;
+        queries.push(&cli_descriptor);
     }
+
+    let entries = parse_str(std::str::from_utf8(&yarn_lock_text)?)?;
 
     // Build a map descriptor => parent
     let mut pkg2parents: HashMap<&(&str, &str), Vec<&(&str, &str)>> = HashMap::new();
@@ -96,15 +116,33 @@ fn main() -> Result<()> {
             }
             pkg2parents.insert(dep, dep_parents);
         }
+
+        // "reuse the cycle" to find the descriptors used for the package
+        // we are searching for (the package could have multiple entries)
+        if search_for_descriptors && e.name == args.query {
+            for d in e.descriptors.iter() {
+                queries.push(d);
+            }
+        }
     }
 
-    let q = args
-        .query
-        .rsplit_once('@')
-        .expect("query format is package@version");
-    let mut curr_path: Vec<&Pkg> = Vec::new();
+    if queries.is_empty() {
+        // The user provided a package name without version, we didn't find it
+        println!("Package not found");
+        std::process::exit(1);
+    }
+
     let mut paths: Vec<Vec<&Pkg>> = Vec::new();
-    tree(&q, &parents, &mut curr_path, &mut paths);
+    for q in queries.iter() {
+        let mut curr_path: Vec<&Pkg> = Vec::new();
+        tree(q, &pkg2parents, &mut curr_path, &mut paths);
+    }
+
+    if paths.len() == 1 && paths.get(0).unwrap().len() == 1 {
+        println!("Package not found");
+        std::process::exit(1);
+    }
+
     for k in paths.iter() {
         println!("{:?}", k);
     }
