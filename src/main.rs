@@ -1,4 +1,4 @@
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use std::collections::HashMap;
 use std::io::{Read, Write};
 use yarn_lock_parser::{parse_str, Entry};
@@ -100,7 +100,9 @@ fn main() -> Result<()> {
 
     let args = Opt {
         version: pargs.contains(["-V", "--version"]),
-        query: pargs.free_from_str()?,
+        query: pargs
+            .free_from_str()
+            .map_err(|_| anyhow!("Missing argument: package[@version]"))?,
     };
 
     let remaining = pargs.finish();
