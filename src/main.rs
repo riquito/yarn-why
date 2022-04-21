@@ -8,14 +8,15 @@ const HELP: &str = concat!(
     env!("CARGO_PKG_VERSION"),
     r#"
 USAGE:
-    yarn-why [FLAGS] [OPTIONS] package < yarn.lock
+    yarn-why [FLAGS] [OPTIONS] package[@version] # read ./yarn.lock
+    yarn-why [FLAGS] [OPTIONS] package[@version] < /path/to/yarn.lock
 
 FLAGS:
-    -V, --version                 Prints version information
-    -h, --help                    Prints this help and exit
+    -V, --version            Prints version information
+    -h, --help               Prints this help and exit
 
 ARGS:
-    package                       Package to query for
+    package[@version]        Package to search for, with or without version
 
 LICENSE: GPL-3.0-or-later
 "#
@@ -45,6 +46,23 @@ fn tree<'a>(
         paths.push(curr_path.clone());
         curr_path.pop();
     }
+}
+
+fn why<'a>(
+    queries: Vec<&'a Pkg>,
+    pkg2parents: &'a HashMap<&'a Pkg<'a>, Vec<&'a Pkg<'a>>>,
+) -> Vec<Vec<&'a Pkg<'a>>> {
+    if queries.is_empty() || pkg2parents.is_empty() {
+        return Vec::new();
+    }
+
+    let mut paths: Vec<Vec<&Pkg>> = Vec::new();
+    for q in queries.iter() {
+        let mut curr_path: Vec<&Pkg> = Vec::new();
+        tree(q, pkg2parents, &mut curr_path, &mut paths);
+    }
+
+    paths
 }
 
 fn get_descriptor_from_cli_arg(arg: &str) -> Option<(&str, &str)> {
@@ -126,19 +144,10 @@ fn main() -> Result<()> {
         }
     }
 
-    if queries.is_empty() {
-        // The user provided a package name without version, we didn't find it
-        println!("Package not found");
-        std::process::exit(1);
-    }
 
-    let mut paths: Vec<Vec<&Pkg>> = Vec::new();
-    for q in queries.iter() {
-        let mut curr_path: Vec<&Pkg> = Vec::new();
-        tree(q, &pkg2parents, &mut curr_path, &mut paths);
-    }
+    let paths = why(queries, &pkg2parents);
 
-    if paths.len() == 1 && paths.get(0).unwrap().len() == 1 {
+    if paths.is_empty() {
         println!("Package not found");
         std::process::exit(1);
     }
