@@ -4,19 +4,24 @@ use std::io::{Read, Write};
 use yarn_lock_parser::{parse_str, Entry};
 
 const HELP: &str = concat!(
-    "Like `yarn why`, but fast",
+    "yarn-why ",
     env!("CARGO_PKG_VERSION"),
     r#"
-USAGE:
-    yarn-why [FLAGS] [OPTIONS] package[@version] # read ./yarn.lock
-    yarn-why [FLAGS] [OPTIONS] package[@version] < /path/to/yarn.lock
 
-FLAGS:
+Usage:
+    yarn-why [OPTIONS] package[@range] # read ./yarn.lock
+    yarn-why [OPTIONS] package[@range] < /path/to/yarn.lock
+
+Example:
+    yarn-why lodash@^4.17.15
+
+OPTIONS:
     -V, --version            Prints version information
     -h, --help               Prints this help and exit
 
 ARGS:
-    package[@version]        Package to search for, with or without version
+    package[@range]          Package to search for, with or without range.
+                             The range must match one in yarn.lock
 
 LICENSE: GPL-3.0-or-later
 "#
