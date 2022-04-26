@@ -10,4 +10,4 @@ license = "GPL-3.0-or-later"
 anyhow = "1.0.41"
 atty = "0.2.14"
 pico-args = "0.4.2"
-yarn-lock-parser = { git = "https://github.com/riquito/yarn-lock-parser", branch = "parse-dependencies" }
+yarn-lock-parser = { git = "https://github.com/riquito/yarn-lock-parser", branch = "support-yarn-v2-or-greater" }
