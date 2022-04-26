@@ -71,8 +71,13 @@ fn why<'a>(
     }
 
     if paths.len() == 1 && paths.get(0).unwrap().len() == 1 {
-        // It's either direct dependency or mistyped
-        // (pkg2parents does not contain entries without parents)
+        // Worst case, we have to search again, O(n).
+        // There are two scenarios:
+        // 1) the package does not exist in yarn.lock (maybe there is one with
+        // that name but definitely not with the searched descriptor version)
+        // 2) the package exists in yarn.lock, but is a direct dependency in
+        // package.json and we couldn't find it in pkg2parents (since that map
+        // contains only packages that are dependencies of something else)
         let q = queries.get(0).unwrap();
         for e in entries {
             if e.name == q.0 && e.descriptors.contains(q) {
