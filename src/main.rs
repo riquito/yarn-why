@@ -25,7 +25,7 @@ LICENSE: GPL-3.0-or-later
 #[derive(Debug)]
 struct Opt {
     version: bool,
-    query: String,
+    query: Option<String>,
 }
 
 type Pkg<'a> = (&'a str, &'a str);
@@ -102,15 +102,13 @@ fn main() -> Result<()> {
 
     let args = Opt {
         version: pargs.contains(["-V", "--version"]),
-        query: pargs
-            .free_from_str()
-            .map_err(|_| anyhow!("Missing argument: package[@version]"))?,
+        query: pargs.free_from_str().ok(),
     };
 
     let remaining = pargs.finish();
 
     if !remaining.is_empty() {
-        eprintln!("yarn-why: unexpected arguments {:?}", remaining);
+        eprintln!("Error: unexpected arguments {:?}", remaining);
         eprintln!("Try 'yarn-why --help' for more information.");
         std::process::exit(1);
     }
@@ -119,6 +117,13 @@ fn main() -> Result<()> {
         println!("yarn-why {}", env!("CARGO_PKG_VERSION"));
         std::process::exit(0);
     }
+
+    let query = {
+        if args.query.is_none() {
+            return Err(anyhow!("Missing argument: package[@version]"));
+        }
+        &args.query.unwrap()
+    };
 
     let mut yarn_lock_text: Vec<u8> = Vec::new();
 
@@ -137,7 +142,7 @@ fn main() -> Result<()> {
 
     let mut queries: Vec<&(&str, &str)> = Vec::new();
 
-    let maybe_cli_descriptor = get_descriptor_from_cli_arg(&args.query);
+    let maybe_cli_descriptor = get_descriptor_from_cli_arg(query);
     let search_for_descriptors = maybe_cli_descriptor.is_none();
     let cli_descriptor: (&str, &str);
 
@@ -161,7 +166,7 @@ fn main() -> Result<()> {
 
         // "reuse the cycle" to find the descriptors used for the package
         // we are searching for (the package could have multiple entries)
-        if search_for_descriptors && e.name == args.query {
+        if search_for_descriptors && e.name == query {
             for d in e.descriptors.iter() {
                 queries.push(d);
             }
