@@ -114,18 +114,22 @@ fn main() -> Result<()> {
 
     if !remaining.is_empty() {
         eprintln!("Error: unexpected arguments {:?}", remaining);
-        eprintln!("Try 'yarn-why --help' for more information.");
+        eprintln!(
+            "Try '{} --help' for more information.",
+            env!("CARGO_PKG_NAME")
+        );
         std::process::exit(1);
     }
 
     if args.version {
-        println!("yarn-why {}", env!("CARGO_PKG_VERSION"));
+        println!("{} {}", env!("CARGO_PKG_NAME"), env!("CARGO_PKG_VERSION"));
         std::process::exit(0);
     }
 
     let query = {
         if args.query.is_none() {
-            return Err(anyhow!("Missing argument: package[@version]"));
+            print!("{}", HELP);
+            std::process::exit(1);
         }
         &args.query.unwrap()
     };
