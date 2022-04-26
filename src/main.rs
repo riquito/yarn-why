@@ -168,7 +168,6 @@ fn main() -> Result<()> {
         }
     }
 
-
     let paths = why(queries, &pkg2parents, &entries);
 
     if paths.is_empty() {
