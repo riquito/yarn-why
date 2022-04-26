@@ -16,6 +16,9 @@ atty = "0.2.14"
 pico-args = "0.4.2"
 yarn-lock-parser = { git = "https://github.com/riquito/yarn-lock-parser", branch = "support-yarn-v2-or-greater" }
 
+[dev-dependencies]
+assert_cmd = "2.0.4"
+
 [profile.release]
 lto = true
 strip = "debuginfo"
