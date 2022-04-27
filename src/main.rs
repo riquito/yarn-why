@@ -60,7 +60,7 @@ fn why<'a>(
     pkg2parents: &'a HashMap<&'a Pkg<'a>, Vec<&'a Pkg<'a>>>,
     entries: &Vec<Entry>,
 ) -> Vec<Vec<&'a Pkg<'a>>> {
-    if queries.is_empty() || pkg2parents.is_empty() {
+    if queries.is_empty() {
         return Vec::new();
     }
 
