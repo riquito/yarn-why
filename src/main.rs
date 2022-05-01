@@ -1,4 +1,5 @@
 use anyhow::{anyhow, Result};
+use std::cell::RefCell;
 use std::collections::HashMap;
 use std::io::{Read, Write};
 use yarn_lock_parser::{parse_str, Entry};
@@ -37,15 +38,24 @@ type Pkg<'a> = (&'a str, &'a str);
 
 fn build_path_to_dependency<'a>(
     pkg: &'a Pkg<'a>,
-    pkg2parents: &'a HashMap<&'a Pkg<'a>, Vec<&'a Pkg<'a>>>,
+    pkg2parents: &'a HashMap<&'a Pkg<'a>, ParentsNode>,
     curr_path: &mut Vec<&'a Pkg<'a>>,
     paths: &mut Vec<Vec<&'a Pkg<'a>>>,
 ) {
     curr_path.push(pkg);
-    let parents = pkg2parents.get(pkg);
-    if parents.is_some() && !parents.unwrap().is_empty() {
-        for p in pkg2parents[pkg].iter() {
-            build_path_to_dependency(p, pkg2parents, curr_path, paths);
+
+    let parents_node = pkg2parents.get(pkg);
+    if parents_node.is_some() && !parents_node.unwrap().desc.is_empty() {
+        // color the parent while traversing. If we already covered it in a
+        // previous path, drop it. This is actually necessary not only to
+        // reduce the overall output, but to solve dependency loops.
+        if *pkg2parents[pkg].traversed.borrow() {
+            curr_path.pop();
+        } else {
+            *pkg2parents[pkg].traversed.borrow_mut() = true;
+            for p in pkg2parents[pkg].desc.iter() {
+                build_path_to_dependency(p, pkg2parents, curr_path, paths);
+            }
         }
     } else {
         let mut res = curr_path.clone();
@@ -57,7 +67,7 @@ fn build_path_to_dependency<'a>(
 
 fn why<'a>(
     queries: Vec<&'a Pkg>,
-    pkg2parents: &'a HashMap<&'a Pkg<'a>, Vec<&'a Pkg<'a>>>,
+    pkg2parents: &'a HashMap<&'a Pkg<'a>, ParentsNode>,
     entries: &Vec<Entry>,
 ) -> Vec<Vec<&'a Pkg<'a>>> {
     if queries.is_empty() {
@@ -89,6 +99,12 @@ fn why<'a>(
     }
 
     paths
+}
+
+#[derive(Debug)]
+struct ParentsNode<'a> {
+    traversed: RefCell<bool>,
+    desc: Vec<&'a (&'a str, &'a str)>,
 }
 
 fn get_descriptor_from_cli_arg(arg: &str) -> Option<(&str, &str)> {
@@ -168,14 +184,22 @@ fn main() -> Result<()> {
     let entries = parse_str(std::str::from_utf8(&yarn_lock_text)?)?;
 
     // Build a map descriptor => parent
-    let mut pkg2parents: HashMap<&(&str, &str), Vec<&(&str, &str)>> = HashMap::new();
+    let mut pkg2parents: HashMap<&(&str, &str), ParentsNode> = HashMap::new();
     for e in entries.iter() {
         for dep in e.dependencies.iter() {
-            let mut dep_parents: Vec<&(&str, &str)> = Vec::new();
-            for d in e.descriptors.iter() {
-                dep_parents.push(d);
+            if !pkg2parents.contains_key(dep) {
+                let parents_node = ParentsNode {
+                    traversed: RefCell::new(false),
+                    desc: Vec::new(),
+                };
+                pkg2parents.insert(dep, parents_node);
             }
-            pkg2parents.insert(dep, dep_parents);
+
+            let dep_parents = pkg2parents.get_mut(dep).unwrap();
+
+            for d in e.descriptors.iter() {
+                dep_parents.desc.push(d);
+            }
         }
 
         // "reuse the cycle" to find the descriptors used for the package
