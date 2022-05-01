@@ -35,7 +35,7 @@ struct Opt {
 
 type Pkg<'a> = (&'a str, &'a str);
 
-fn tree<'a>(
+fn build_path_to_dependency<'a>(
     pkg: &'a Pkg<'a>,
     pkg2parents: &'a HashMap<&'a Pkg<'a>, Vec<&'a Pkg<'a>>>,
     curr_path: &mut Vec<&'a Pkg<'a>>,
@@ -45,7 +45,7 @@ fn tree<'a>(
     let parents = pkg2parents.get(pkg);
     if parents.is_some() && !parents.unwrap().is_empty() {
         for p in pkg2parents[pkg].iter() {
-            tree(p, pkg2parents, curr_path, paths);
+            build_path_to_dependency(p, pkg2parents, curr_path, paths);
         }
     } else {
         let mut res = curr_path.clone();
@@ -67,7 +67,7 @@ fn why<'a>(
     let mut paths: Vec<Vec<&Pkg>> = Vec::new();
     for q in queries.iter() {
         let mut curr_path: Vec<&Pkg> = Vec::new();
-        tree(q, pkg2parents, &mut curr_path, &mut paths);
+        build_path_to_dependency(q, pkg2parents, &mut curr_path, &mut paths);
     }
 
     if paths.len() == 1 && paths.get(0).unwrap().len() == 1 {
