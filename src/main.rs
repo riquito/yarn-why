@@ -36,6 +36,7 @@ struct Opt {
 
 type Pkg<'a> = (&'a str, &'a str);
 
+#[allow(clippy::ptr_arg)]
 fn build_path_to_dependency<'a>(
     pkg: &'a Pkg<'a>,
     pkg2parents: &'a HashMap<&'a Pkg<'a>, ParentsNode>,
