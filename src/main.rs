@@ -212,7 +212,8 @@ fn main() -> Result<()> {
         }
     }
 
-    let paths = why(queries, &pkg2parents, &entries);
+    let mut paths = why(queries, &pkg2parents, &entries);
+    paths.sort();
 
     if paths.is_empty() {
         println!("Package not found");
