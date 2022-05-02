@@ -21,6 +21,7 @@ Example:
 
 OPTIONS:
     -d, --max-depth [depth]  Truncate dependencies at that level [Default: 10]
+    -D, --no-max-depth       Ignore max-depth (both default and user defined)
     -j, --json               Format the output as JSON
     -h, --help               Prints this help and exit
     -V, --version            Prints version information
@@ -38,6 +39,7 @@ struct Opt {
     version: bool,
     json: bool,
     max_depth: Option<usize>,
+    no_max_depth: bool,
     query: Option<String>,
 }
 
@@ -137,6 +139,7 @@ fn main() -> Result<()> {
     let args = Opt {
         version: pargs.contains(["-V", "--version"]),
         json: pargs.contains(["-j", "--json"]),
+        no_max_depth: pargs.contains(["-D", "--no-max-depth"]),
         max_depth: pargs
             .opt_value_from_str(["-d", "--max-depth"])?
             .or(Some(10)),
@@ -225,9 +228,13 @@ fn main() -> Result<()> {
 
     let mut paths = why(queries, &pkg2parents, &entries);
 
-    if let Some(max_depth) = args.max_depth {
-        for p in paths.iter_mut() {
-            p.truncate(max_depth);
+    // A bit convoluted, but allow us to have both a sensible default
+    // and yet let users ask to go all the way down.
+    if !args.no_max_depth {
+        if let Some(max_depth) = args.max_depth {
+            for p in paths.iter_mut() {
+                p.truncate(max_depth);
+            }
         }
     }
 
