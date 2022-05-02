@@ -2,6 +2,7 @@ use anyhow::{anyhow, Result};
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::io::{Read, Write};
+use std::rc::Rc;
 use yarn_lock_parser::{parse_str, Entry};
 
 const HELP: &str = concat!(
@@ -228,7 +229,64 @@ fn main() -> Result<()> {
         }
     }
 
+    let tree = convert_paths_to_tree(paths.as_slice());
+
+    print_tree(&tree);
+
     stdout.flush()?;
 
     Ok(())
+}
+
+fn print_tree(tree: &[Rc<RefCell<Node>>]) {
+    for node in tree {
+        _print_tree(node, 0);
+    }
+}
+
+fn _print_tree(node: &Rc<RefCell<Node>>, indent: usize) {
+    let node = node.borrow();
+    println!("{:indent$}{:?}", "", node.pkg, indent = indent);
+    for child in node.children.iter() {
+        _print_tree(child, indent + 3);
+    }
+}
+
+#[derive(Debug)]
+struct Node<'a> {
+    children: Vec<Rc<RefCell<Node<'a>>>>,
+    pkg: &'a Pkg<'a>,
+}
+
+fn convert_paths_to_tree<'a>(paths: &'a [Vec<&Pkg<'a>>]) -> Vec<Rc<RefCell<Node<'a>>>> {
+    let mut nodes: HashMap<&Pkg, Rc<RefCell<Node>>> = HashMap::new();
+    let mut output: Vec<Rc<RefCell<Node>>> = Vec::new();
+
+    for path in paths {
+        let mut prev_pkg: Option<&Pkg> = None;
+
+        for pkg in path.iter() {
+            if nodes.contains_key(pkg) {
+                prev_pkg = Some(pkg);
+                continue;
+            }
+
+            let node = Rc::new(RefCell::new(Node {
+                children: Vec::new(),
+                pkg,
+            }));
+
+            nodes.insert(pkg, node.clone());
+
+            if let Some(parent_key) = prev_pkg {
+                let mut parent = nodes.get(parent_key).unwrap().borrow_mut();
+                parent.children.push(node);
+            } else {
+                // first item in the path, is a root parent
+                output.push(node);
+            }
+            prev_pkg = Some(pkg);
+        }
+    }
+    output
 }
