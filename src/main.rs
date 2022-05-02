@@ -21,6 +21,7 @@ Example:
 
 OPTIONS:
     -V, --version            Prints version information
+    -d, --max-depth [depth]  Truncate dependencies at that level [Default: 10]
     -h, --help               Prints this help and exit
 
 ARGS:
@@ -35,6 +36,7 @@ LICENSE: GPL-3.0-or-later
 struct Opt {
     version: bool,
     json: bool,
+    max_depth: Option<usize>,
     query: Option<String>,
 }
 
@@ -134,6 +136,9 @@ fn main() -> Result<()> {
     let args = Opt {
         version: pargs.contains(["-V", "--version"]),
         json: pargs.contains(["-j", "--json"]),
+        max_depth: pargs
+            .opt_value_from_str(["-d", "--max-depth"])?
+            .or(Some(10)),
         query: pargs.free_from_str().ok(),
     };
 
@@ -218,6 +223,13 @@ fn main() -> Result<()> {
     }
 
     let mut paths = why(queries, &pkg2parents, &entries);
+
+    if let Some(max_depth) = args.max_depth {
+        for p in paths.iter_mut() {
+            p.truncate(max_depth);
+        }
+    }
+
     paths.sort();
 
     if paths.is_empty() {
