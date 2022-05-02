@@ -1,4 +1,6 @@
 use anyhow::{anyhow, Result};
+use serde::{Serialize, Serializer};
+use serde_json::Result as SerdeJsonResult;
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::io::{Read, Write};
@@ -32,6 +34,7 @@ LICENSE: GPL-3.0-or-later
 #[derive(Debug)]
 struct Opt {
     version: bool,
+    json: bool,
     query: Option<String>,
 }
 
@@ -130,6 +133,7 @@ fn main() -> Result<()> {
 
     let args = Opt {
         version: pargs.contains(["-V", "--version"]),
+        json: pargs.contains(["-j", "--json"]),
         query: pargs.free_from_str().ok(),
     };
 
@@ -221,41 +225,50 @@ fn main() -> Result<()> {
         std::process::exit(1);
     }
 
-    for p in paths.iter() {
-        let mut depth = 0;
-        for elem in p.iter() {
-            println!("{:indent$}{}@{}", "", elem.0, elem.1, indent = depth);
-            depth += 3;
+    if args.json {
+        let tree = convert_paths_to_tree(paths.as_slice());
+        print_tree(&tree)?;
+    } else {
+        for p in paths.iter() {
+            let mut depth = 0;
+            for elem in p.iter() {
+                println!("{:indent$}{}@{}", "", elem.0, elem.1, indent = depth);
+                depth += 3;
+            }
         }
     }
-
-    let tree = convert_paths_to_tree(paths.as_slice());
-
-    print_tree(&tree);
 
     stdout.flush()?;
 
     Ok(())
 }
 
-fn print_tree(tree: &[Rc<RefCell<Node>>]) {
-    for node in tree {
-        _print_tree(node, 0);
-    }
+fn print_tree(tree: &[Rc<RefCell<Node>>]) -> SerdeJsonResult<()> {
+    let j = serde_json::to_string(&tree)?;
+    println!("{}", j);
+    Ok(())
 }
 
-fn _print_tree(node: &Rc<RefCell<Node>>, indent: usize) {
-    let node = node.borrow();
-    println!("{:indent$}{:?}", "", node.pkg, indent = indent);
-    for child in node.children.iter() {
-        _print_tree(child, indent + 3);
-    }
-}
-
-#[derive(Debug)]
+#[derive(Debug, Serialize)]
 struct Node<'a> {
+    #[serde(skip_serializing_if = "serialize_skip_if_children_empty")]
     children: Vec<Rc<RefCell<Node<'a>>>>,
+    #[serde(
+        rename(serialize = "descriptor"),
+        serialize_with = "serialize_pkg_as_string"
+    )]
     pkg: &'a Pkg<'a>,
+}
+
+fn serialize_skip_if_children_empty<T>(x: &[T]) -> bool {
+    x.is_empty()
+}
+
+fn serialize_pkg_as_string<'a, S>(x: &'a Pkg<'a>, s: S) -> Result<S::Ok, S::Error>
+where
+    S: Serializer,
+{
+    s.serialize_str(&format!("{}@{}", x.0, x.1))
 }
 
 fn convert_paths_to_tree<'a>(paths: &'a [Vec<&Pkg<'a>>]) -> Vec<Rc<RefCell<Node<'a>>>> {
