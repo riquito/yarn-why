@@ -15,7 +15,7 @@ cargo install yarn-why
 ## Help
 
 ```
-yarn-why 0.1.0
+yarn-why 0.1.0-rc1
 
 Usage:
     yarn-why [OPTIONS] package[@range] # read ./yarn.lock
@@ -25,8 +25,11 @@ Example:
     yarn-why lodash@^4.17.15
 
 OPTIONS:
-    -V, --version            Prints version information
+    -d, --max-depth [depth]  Truncate dependencies at that level [Default: 10]
+    -D, --no-max-depth       Ignore max-depth (both default and user defined)
+    -j, --json               Format the output as JSON
     -h, --help               Prints this help and exit
+    -V, --version            Prints version information
 
 ARGS:
     package[@range]          Package to search for, with or without range.
