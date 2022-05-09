@@ -16,7 +16,7 @@ atty = "0.2.14"
 pico-args = "0.4.2"
 serde = { version = "1.0.137", features = ["derive", "rc"] }
 serde_json = "1.0.81"
-yarn-lock-parser = { git = "https://github.com/riquito/yarn-lock-parser", branch = "support-yarn-v2-or-greater" }
+yarn-lock-parser = { version = "0.3.0" }
 
 [dev-dependencies]
 assert_cmd = "2.0.4"
