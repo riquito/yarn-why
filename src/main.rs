@@ -173,7 +173,7 @@ fn main() -> Result<()> {
     let mut yarn_lock_text: Vec<u8> = Vec::new();
 
     if atty::is(atty::Stream::Stdin) {
-        let mut f = std::fs::File::open("yarns.lock")
+        let mut f = std::fs::File::open("yarn.lock")
             .map_err(|e| anyhow!("Cannot open yarn.lock: {}", e))?;
         f.read_to_end(&mut yarn_lock_text)?;
     } else {
