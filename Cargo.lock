@@ -290,8 +290,8 @@ checksum = "712e227841d057c1ee1cd2fb22fa7e5a5461ae8e48fa2ca79ec42cfc1931183f"
 
 [[package]]
 name = "yarn-lock-parser"
-version = "0.2.0"
-source = "git+https://github.com/riquito/yarn-lock-parser?branch=support-yarn-v2-or-greater#b39bb989fedc432af0191c6c7f4554d9fdd905fe"
+version = "0.3.0"
+source = "git+https://github.com/riquito/yarn-lock-parser?branch=support-yarn-v2-or-greater#bca88ff57451a034401273e1c78cf20500a3c3b0"
 dependencies = [
  "nom",
  "thiserror",
