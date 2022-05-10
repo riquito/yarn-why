@@ -4,6 +4,7 @@ use serde_json::Result as SerdeJsonResult;
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::io::{Read, Write};
+use std::path::PathBuf;
 use std::rc::Rc;
 use yarn_lock_parser::{parse_str, Entry};
 
@@ -15,6 +16,7 @@ const HELP: &str = concat!(
 Usage:
     yarn-why [OPTIONS] package[@range] # read ./yarn.lock
     yarn-why [OPTIONS] package[@range] < /path/to/yarn.lock
+    yarn-why [OPTIONS] package[@range] -y /path/to/yarn.lock
 
 Example:
     yarn-why lodash@^4.17.15
@@ -25,6 +27,7 @@ OPTIONS:
     -j, --json               Format the output as JSON
     -h, --help               Prints this help and exit
     -V, --version            Prints version information
+    -y, --yarn-lock-file     Path to a yarn.lock file to parse
 
 ARGS:
     package[@range]          Package to search for, with or without range.
@@ -41,6 +44,7 @@ struct Opt {
     max_depth: Option<usize>,
     no_max_depth: bool,
     query: Option<String>,
+    yarn_lock_path: Option<PathBuf>,
 }
 
 type Pkg<'a> = (&'a str, &'a str);
@@ -128,6 +132,10 @@ fn get_descriptor_from_cli_arg(arg: &str) -> Option<(&str, &str)> {
     None
 }
 
+fn parse_path(s: &std::ffi::OsStr) -> Result<std::path::PathBuf, &'static str> {
+    Ok(s.into())
+}
+
 fn main() -> Result<()> {
     let mut pargs = pico_args::Arguments::from_env();
 
@@ -143,6 +151,7 @@ fn main() -> Result<()> {
         max_depth: pargs
             .opt_value_from_str(["-d", "--max-depth"])?
             .or(Some(10)),
+        yarn_lock_path: pargs.opt_value_from_os_str(["-y", "--yarn-lock-path"], parse_path)?,
         query: pargs.free_from_str().ok(),
     };
 
@@ -172,8 +181,15 @@ fn main() -> Result<()> {
 
     let mut yarn_lock_text: Vec<u8> = Vec::new();
 
-    if atty::is(atty::Stream::Stdin) {
-        let mut f = std::fs::File::open("yarn.lock")
+    let must_read_yarn_lock = args.yarn_lock_path.is_some();
+    let yarn_lock_path = if let Some(path) = args.yarn_lock_path {
+        path
+    } else {
+        PathBuf::from("yarn.lock")
+    };
+
+    if must_read_yarn_lock || atty::is(atty::Stream::Stdin) {
+        let mut f = std::fs::File::open(yarn_lock_path)
             .map_err(|e| anyhow!("Cannot open yarn.lock: {}", e))?;
         f.read_to_end(&mut yarn_lock_text)?;
     } else {
