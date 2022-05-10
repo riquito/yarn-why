@@ -1,4 +1,7 @@
 # yarn-why
+[![version](https://img.shields.io/crates/v/yarn-why.svg)](https://crates.io/crates/yarn-why)
+![ci](https://github.com/riquito/yarn-why/actions/workflows/ci.yml/badge.svg)
+[![license](https://img.shields.io/crates/l/yarn-why.svg)](https://crates.io/crates/yarn-why)
 
 `yarn why`, but fast
 
