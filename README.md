@@ -20,6 +20,7 @@ yarn-why 1.0.0-rc2
 Usage:
     yarn-why [OPTIONS] package[@range] # read ./yarn.lock
     yarn-why [OPTIONS] package[@range] < /path/to/yarn.lock
+    yarn-why [OPTIONS] package[@range] -y /path/to/yarn.lock
 
 Example:
     yarn-why lodash@^4.17.15
@@ -30,6 +31,7 @@ OPTIONS:
     -j, --json               Format the output as JSON
     -h, --help               Prints this help and exit
     -V, --version            Prints version information
+    -y, --yarn-lock-file     Path to a yarn.lock file to parse
 
 ARGS:
     package[@range]          Package to search for, with or without range.
