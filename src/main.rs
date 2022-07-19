@@ -261,17 +261,12 @@ fn main() -> Result<()> {
         std::process::exit(1);
     }
 
+    let tree = convert_paths_to_tree(paths.as_slice());
+
     if args.json {
-        let tree = convert_paths_to_tree(paths.as_slice());
-        print_tree(&tree)?;
+        print_tree_as_json(&tree)?;
     } else {
-        for p in paths.iter() {
-            let mut depth = 0;
-            for elem in p.iter() {
-                println!("{:indent$}{}@{}", "", elem.0, elem.1, indent = depth);
-                depth += 3;
-            }
-        }
+        print_tree(&tree);
     }
 
     stdout.flush()?;
@@ -279,7 +274,50 @@ fn main() -> Result<()> {
     Ok(())
 }
 
-fn print_tree(tree: &[Rc<RefCell<Node>>]) -> SerdeJsonResult<()> {
+fn print_tree_node(node: &Node, level: usize, is_last: bool, cols: Vec<char>) {
+    let mut prefix = String::new();
+
+    for c in cols.iter() {
+        prefix.push(*c);
+        prefix.push_str("  ");
+    }
+
+    let symbol = if is_last { '└' } else { '├' };
+    let pkg_name = node.pkg.0;
+    let pkg_descriptor = node.pkg.1;
+
+    println!("{prefix}{symbol}─ {pkg_name}@{pkg_descriptor}");
+
+    for (i, child) in node.children.iter().enumerate() {
+        let mut child_levels = Vec::new();
+        let mut new_cols = cols.clone();
+        child_levels.append(&mut new_cols);
+        child_levels.push(if is_last { ' ' } else { '│' });
+
+        print_tree_node(
+            &child.as_ref().borrow(),
+            level + 1,
+            i == node.children.len() - 1,
+            child_levels,
+        );
+    }
+}
+
+fn print_tree(tree: &[Rc<RefCell<Node>>]) {
+    for (i, wrapped_node) in tree.iter().enumerate() {
+        if i > 0 && i < tree.len() {
+            println!("│");
+        }
+        print_tree_node(
+            &wrapped_node.as_ref().borrow(),
+            0,
+            i == tree.len() - 1,
+            Vec::new(),
+        );
+    }
+}
+
+fn print_tree_as_json(tree: &[Rc<RefCell<Node>>]) -> SerdeJsonResult<()> {
     let j = serde_json::to_string(&tree)?;
     println!("{}", j);
     Ok(())

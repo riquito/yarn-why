@@ -78,8 +78,8 @@ fn it_finds_a_package_with_range() {
         .assert();
 
     assert.success().stdout(
-        r#"foo@.
-   foolib@1.2.3 || ^2.0.0
+        r#"└─ foo@.
+   └─ foolib@1.2.3 || ^2.0.0
 "#,
     );
 }
@@ -94,8 +94,8 @@ fn it_finds_a_package_without_range() {
         .assert();
 
     assert.success().stdout(
-        r#"foo@.
-   foolib@1.2.3 || ^2.0.0
+        r#"└─ foo@.
+   └─ foolib@1.2.3 || ^2.0.0
 "#,
     );
 }
@@ -109,5 +109,5 @@ fn it_finds_a_package_in_a_yarn_lock_with_only_direct_deps() {
         .write_stdin(YARN_LOCK_V6_ONLY_DIRECT_DEPS)
         .assert();
 
-    assert.success().stdout("foolib@1.2.3 || ^2.0.0\n");
+    assert.success().stdout("└─ foolib@1.2.3 || ^2.0.0\n");
 }
