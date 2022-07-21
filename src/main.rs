@@ -1,6 +1,7 @@
 use anyhow::{anyhow, Result};
 use serde::{Serialize, Serializer};
 use serde_json::Result as SerdeJsonResult;
+use std::borrow::Cow;
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::io::{Read, Write};
@@ -266,7 +267,7 @@ fn main() -> Result<()> {
     if args.json {
         print_tree_as_json(&tree)?;
     } else {
-        print_tree(&tree);
+        print_tree(&tree, &mut stdout);
     }
 
     stdout.flush()?;
@@ -274,7 +275,21 @@ fn main() -> Result<()> {
     Ok(())
 }
 
-fn print_tree_node(node: &Node, level: usize, is_last: bool, cols: Vec<char>) {
+fn colorize(s: &str, (r, g, b): (usize, usize, usize)) -> Cow<'_, str> {
+    if s.is_empty() || !atty::is(atty::Stream::Stdout) {
+        Cow::Borrowed(s)
+    } else {
+        Cow::Owned(format!("\x1b[38;2;{r};{g};{b}m{s}\x1b[0m"))
+    }
+}
+
+fn print_tree_node<W: Write>(
+    node: &Node,
+    level: usize,
+    is_last: bool,
+    cols: Vec<char>,
+    stdout: &mut W,
+) {
     let mut prefix = String::new();
 
     for c in cols.iter() {
@@ -286,7 +301,21 @@ fn print_tree_node(node: &Node, level: usize, is_last: bool, cols: Vec<char>) {
     let pkg_name = node.pkg.0;
     let pkg_descriptor = node.pkg.1;
 
-    println!("{prefix}{symbol}─ {pkg_name}@{pkg_descriptor}");
+    let mut namespace = "";
+    let mut name = pkg_name;
+    if pkg_name.starts_with('@') && pkg_name.contains('/') {
+        let idx = pkg_name.find('/').unwrap();
+        (namespace, name) = (&pkg_name[..idx], &pkg_name[idx..]);
+    }
+
+    writeln!(
+        stdout,
+        "{prefix}{symbol}─ {namespace}{name}@{pkg_descriptor}",
+        namespace = colorize(namespace, (215, 95, 0)),
+        name = colorize(name, (215, 135, 95)),
+        pkg_descriptor = colorize(pkg_descriptor, (135, 175, 255))
+    )
+    .expect("Failed to write to stdout");
 
     for (i, child) in node.children.iter().enumerate() {
         let mut child_levels = Vec::new();
@@ -299,20 +328,22 @@ fn print_tree_node(node: &Node, level: usize, is_last: bool, cols: Vec<char>) {
             level + 1,
             i == node.children.len() - 1,
             child_levels,
+            stdout,
         );
     }
 }
 
-fn print_tree(tree: &[Rc<RefCell<Node>>]) {
+fn print_tree<W: Write>(tree: &[Rc<RefCell<Node>>], stdout: &mut W) {
     for (i, wrapped_node) in tree.iter().enumerate() {
         if i > 0 && i < tree.len() {
-            println!("│");
+            writeln!(stdout, "│").expect("Failed to write to stdout");
         }
         print_tree_node(
             &wrapped_node.as_ref().borrow(),
             0,
             i == tree.len() - 1,
             Vec::new(),
+            stdout,
         );
     }
 }
