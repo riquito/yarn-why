@@ -126,7 +126,7 @@ fn why<'a>(
         }
     }
 
-    if paths.len() == 1 && paths.get(0).unwrap().len() == 1 {
+    if paths.is_empty() {
         // Worst case, we have to search again, O(n).
         // There are two scenarios:
         // 1) the package does not exist in yarn.lock (maybe there is one with
@@ -137,11 +137,9 @@ fn why<'a>(
         let q = queries.get(0).unwrap();
         for e in entries {
             if e.name == q.0 && e.descriptors.contains(q) {
-                return paths;
+                paths = vec![vec![q]];
             }
         }
-
-        paths = Vec::new();
     }
 
     paths
