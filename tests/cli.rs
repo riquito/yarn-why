@@ -111,3 +111,15 @@ fn it_finds_a_package_in_a_yarn_lock_with_only_direct_deps() {
 
     assert.success().stdout("└─ foolib@1.2.3 || ^2.0.0\n");
 }
+
+#[test]
+fn it_exit_with_error_if_the_package_cannot_be_found() {
+    let mut cmd = Command::cargo_bin(env!("CARGO_PKG_NAME")).unwrap();
+
+    let assert = cmd
+        .args(&["not-there"])
+        .write_stdin(YARN_LOCK_V6_ONLY_DIRECT_DEPS)
+        .assert();
+
+    assert.failure().stdout("Package not found\n").code(1);
+}
