@@ -407,29 +407,48 @@ fn convert_paths_to_tree<'a>(paths: &'a [Vec<&Pkg<'a>>]) -> Vec<Rc<RefCell<Node<
     let mut nodes: HashMap<&Pkg, Rc<RefCell<Node>>> = HashMap::new();
     let mut output: Vec<Rc<RefCell<Node>>> = Vec::new();
 
-    for path in paths {
+    for (paths_idx, path) in paths.iter().enumerate() {
         let mut prev_pkg: Option<&Pkg> = None;
 
-        for pkg in path.iter() {
-            if nodes.contains_key(pkg) {
-                prev_pkg = Some(pkg);
-                continue;
+        for (path_idx, pkg) in path.iter().enumerate() {
+            if prev_pkg == None {
+                // It's a new root, did we already add it?
+                if !nodes.contains_key(pkg) {
+                    let node = Rc::new(RefCell::new(Node {
+                        children: Vec::new(),
+                        pkg,
+                    }));
+
+                    output.push(node.clone());
+                    nodes.insert(pkg, node);
+                }
+            } else if !(paths_idx > 0
+                && path.get(..path_idx + 1) == paths[paths_idx - 1].get(..path_idx + 1))
+            {
+                // so.. not a root package, path different from previous
+
+                let node = nodes.entry(pkg).or_insert_with(|| {
+                    Rc::new(RefCell::new(Node {
+                        children: Vec::new(),
+                        pkg,
+                    }))
+                });
+
+                // it must have a parent at this point
+                let cloned_node = node.clone();
+                let parent = nodes.get(prev_pkg.unwrap()).unwrap();
+
+                // did we already add this pkg as children of its parent?
+                if parent
+                    .borrow_mut()
+                    .children
+                    .iter()
+                    .all(|c| &c.borrow_mut().pkg != pkg)
+                {
+                    parent.borrow_mut().children.push(cloned_node);
+                }
             }
 
-            let node = Rc::new(RefCell::new(Node {
-                children: Vec::new(),
-                pkg,
-            }));
-
-            nodes.insert(pkg, node.clone());
-
-            if let Some(parent_key) = prev_pkg {
-                let mut parent = nodes.get(parent_key).unwrap().borrow_mut();
-                parent.children.push(node);
-            } else {
-                // first item in the path, is a root parent
-                output.push(node);
-            }
             prev_pkg = Some(pkg);
         }
     }
