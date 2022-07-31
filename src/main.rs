@@ -78,13 +78,15 @@ fn _build_path_to_dependency<'a>(
         // root dependency (no parents, it must have been defined in package.json)
         let mut complete_path = curr_path.clone();
         complete_path.reverse();
-        complete_path.truncate(
-            complete_path
-                .iter()
-                .position(|n| n == complete_path.last().unwrap())
-                .unwrap()
-                + 1,
-        );
+
+        // If the queried package had cycles, we keep just the leftmost occurrence
+        let queried_package = complete_path.last().unwrap();
+        let first_idx_of_queried_package = complete_path
+            .iter()
+            .position(|n| n == queried_package)
+            .unwrap();
+        complete_path.truncate(first_idx_of_queried_package + 1);
+
         paths.push(complete_path);
     } else {
         for p in parents.iter() {
