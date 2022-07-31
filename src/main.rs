@@ -38,6 +38,8 @@ LICENSE: GPL-3.0-or-later
 "#
 );
 
+static MAX_PKG_VISITS: usize = 20;
+
 #[derive(Debug)]
 struct Opt {
     version: bool,
@@ -86,7 +88,7 @@ fn _build_path_to_dependency<'a>(
         paths.push(complete_path);
     } else {
         for p in parents.iter() {
-            if *visited.get(p).unwrap_or(&0_usize) < 20 {
+            if *visited.get(p).unwrap_or(&0_usize) < MAX_PKG_VISITS {
                 _build_path_to_dependency(p, pkg2parents, curr_path, paths, visited);
             }
         }
