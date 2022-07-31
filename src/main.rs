@@ -3,11 +3,13 @@ use serde::{Serialize, Serializer};
 use serde_json::Result as SerdeJsonResult;
 use std::borrow::Cow;
 use std::cell::RefCell;
-use std::collections::HashMap;
 use std::io::{Read, Write};
 use std::path::PathBuf;
 use std::rc::Rc;
 use yarn_lock_parser::{parse_str, Entry};
+
+extern crate fxhash;
+use fxhash::FxHashMap as HashMap;
 
 const HELP: &str = concat!(
     "yarn-why ",
@@ -108,7 +110,7 @@ fn build_path_to_dependency<'a>(
         return;
     }
 
-    let mut visited: HashMap<&'a Pkg<'a>, usize> = HashMap::new();
+    let mut visited: HashMap<&'a Pkg<'a>, usize> = HashMap::default();
 
     let mut path = Vec::new();
     _build_path_to_dependency(pkg, pkg2parents, &mut path, paths, &mut visited);
@@ -248,7 +250,7 @@ fn main() -> Result<()> {
     let entries = parse_str(std::str::from_utf8(&yarn_lock_text)?)?;
 
     // Build a map descriptor => parent
-    let mut pkg2parents: HashMap<&(&str, &str), ParentsNode> = HashMap::new();
+    let mut pkg2parents: HashMap<&(&str, &str), ParentsNode> = HashMap::default();
     for e in entries.iter() {
         for dep in e.dependencies.iter() {
             if !pkg2parents.contains_key(dep) {
@@ -406,7 +408,7 @@ where
 }
 
 fn convert_paths_to_tree<'a>(paths: &'a [Vec<&Pkg<'a>>]) -> Vec<Rc<RefCell<Node<'a>>>> {
-    let mut nodes: HashMap<&Pkg, Rc<RefCell<Node>>> = HashMap::new();
+    let mut nodes: HashMap<&Pkg, Rc<RefCell<Node>>> = HashMap::default();
     let mut output: Vec<Rc<RefCell<Node>>> = Vec::new();
 
     for (paths_idx, path) in paths.iter().enumerate() {
@@ -467,26 +469,26 @@ mod tests {
     const PKG_D: Pkg = ("d", "v1");
 
     fn mock_pkg2parents_empty<'a>() -> HashMap<&'a Pkg<'a>, ParentsNode<'a>> {
-        let pkg2parents: HashMap<&Pkg, ParentsNode> = HashMap::new();
+        let pkg2parents: HashMap<&Pkg, ParentsNode> = HashMap::default();
         pkg2parents
     }
 
     fn mock_pkg2parents_one_element<'a>() -> HashMap<&'a Pkg<'a>, ParentsNode<'a>> {
-        let mut pkg2parents: HashMap<&Pkg, ParentsNode> = HashMap::new();
+        let mut pkg2parents: HashMap<&Pkg, ParentsNode> = HashMap::default();
         let p = ParentsNode { desc: Vec::new() };
         pkg2parents.insert(&PKG_A, p);
         pkg2parents
     }
 
     fn mock_pkg2parents_ab<'a>() -> HashMap<&'a Pkg<'a>, ParentsNode<'a>> {
-        let mut pkg2parents: HashMap<&Pkg, ParentsNode> = HashMap::new();
+        let mut pkg2parents: HashMap<&Pkg, ParentsNode> = HashMap::default();
         let p = ParentsNode { desc: vec![&PKG_B] };
         pkg2parents.insert(&PKG_A, p);
         pkg2parents
     }
 
     fn mock_pkg2parents_ab_ac<'a>() -> HashMap<&'a Pkg<'a>, ParentsNode<'a>> {
-        let mut pkg2parents: HashMap<&Pkg, ParentsNode> = HashMap::new();
+        let mut pkg2parents: HashMap<&Pkg, ParentsNode> = HashMap::default();
         let p = ParentsNode {
             desc: vec![&PKG_B, &PKG_C],
         };
@@ -495,7 +497,7 @@ mod tests {
     }
 
     fn mock_pkg2parents_abc_abdc<'a>() -> HashMap<&'a Pkg<'a>, ParentsNode<'a>> {
-        let mut pkg2parents: HashMap<&Pkg, ParentsNode> = HashMap::new();
+        let mut pkg2parents: HashMap<&Pkg, ParentsNode> = HashMap::default();
         let c_parents = ParentsNode {
             desc: vec![&PKG_D, &PKG_B],
         };
