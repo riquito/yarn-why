@@ -331,6 +331,7 @@ fn main() -> Result<()> {
     Ok(())
 }
 
+#[inline(always)]
 fn colorize(s: &str, (r, g, b): (usize, usize, usize)) -> Cow<'_, str> {
     if s.is_empty() || !*IS_STDIN_TTY.get().unwrap() {
         Cow::Borrowed(s)
