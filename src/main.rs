@@ -27,6 +27,7 @@ Example:
 OPTIONS:
     -d, --max-depth [depth]  Truncate dependencies at that level [Default: 10]
     -D, --no-max-depth       Ignore max-depth (both default and user defined)
+        --(no)-dedup         Display packages at most once [Default: true]
     -j, --json               Format the output as JSON
     -h, --help               Prints this help and exit
     -V, --version            Prints version information
@@ -47,6 +48,7 @@ struct Opt {
     version: bool,
     json: bool,
     max_depth: Option<usize>,
+    dedup: bool,
     no_max_depth: bool,
     query: Option<String>,
     yarn_lock_path: Option<PathBuf>,
@@ -179,9 +181,14 @@ fn main() -> Result<()> {
         std::process::exit(0);
     }
 
+    #[allow(unused_assignments)]
+    let mut dedup: bool = pargs.contains(["-X", "--dedup"]);
+    dedup = !pargs.contains(["-N", "--no-dedup"]);
+
     let args = Opt {
         version: pargs.contains(["-V", "--version"]),
         json: pargs.contains(["-j", "--json"]),
+        dedup,
         no_max_depth: pargs.contains(["-D", "--no-max-depth"]),
         max_depth: pargs
             .opt_value_from_str(["-d", "--max-depth"])?
@@ -276,6 +283,17 @@ fn main() -> Result<()> {
 
     let mut paths = why(queries, &pkg2parents, &entries);
 
+    paths.sort();
+
+    if paths.is_empty() {
+        println!("Package not found");
+        std::process::exit(1);
+    }
+
+    if args.dedup {
+        dedup_paths(&mut paths.as_mut_slice());
+    }
+
     // A bit convoluted, but allow us to have both a sensible default
     // and yet let users ask to go all the way down.
     if !args.no_max_depth {
@@ -284,13 +302,6 @@ fn main() -> Result<()> {
                 p.truncate(max_depth);
             }
         }
-    }
-
-    paths.sort();
-
-    if paths.is_empty() {
-        println!("Package not found");
-        std::process::exit(1);
     }
 
     let tree = convert_paths_to_tree(paths.as_slice());
@@ -405,6 +416,36 @@ where
     S: Serializer,
 {
     s.serialize_str(&format!("{}@{}", x.0, x.1))
+}
+
+fn dedup_paths(paths: &mut &mut [Vec<&Pkg>]) {
+    let mut idx = 0;
+    let mut visited: HashMap<&Pkg, bool> = HashMap::default();
+
+    let mut num_paths_visited;
+    loop {
+        num_paths_visited = 0;
+
+        for p in paths.iter_mut() {
+            if p.len() > idx {
+                if p.len() != idx + 1 {
+                    let pkg = p.get(idx).unwrap();
+                    if visited.contains_key(pkg) {
+                        p.truncate(idx);
+                    } else {
+                        visited.insert(pkg, true);
+                    }
+                }
+                num_paths_visited += 1;
+            }
+        }
+
+        idx += 1;
+
+        if num_paths_visited == 0 {
+            break;
+        }
+    }
 }
 
 fn convert_paths_to_tree<'a>(paths: &'a [Vec<&Pkg<'a>>]) -> Vec<Rc<RefCell<Node<'a>>>> {
