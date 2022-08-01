@@ -376,7 +376,7 @@ fn print_tree_node<W: Write>(
     .expect("Failed to write to stdout");
 
     for (i, child) in node.children.iter().enumerate() {
-        let mut child_levels = Vec::new();
+        let mut child_levels = Vec::with_capacity(cols.len() + 1);
         let mut new_cols = cols.clone();
         child_levels.append(&mut new_cols);
         child_levels.push(if is_last { ' ' } else { '│' });
