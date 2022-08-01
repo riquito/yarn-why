@@ -44,6 +44,7 @@ LICENSE: GPL-3.0-or-later
 
 static MAX_PKG_VISITS_DEFAULT: usize = 20;
 static MAX_PKG_VISITS: OnceCell<usize> = OnceCell::new();
+static IS_STDIN_TTY: OnceCell<bool> = OnceCell::new();
 
 #[derive(Debug)]
 struct Opt {
@@ -224,6 +225,8 @@ fn main() -> Result<()> {
         MAX_PKG_VISITS.set(MAX_PKG_VISITS_DEFAULT).unwrap();
     }
 
+    IS_STDIN_TTY.set(atty::is(atty::Stream::Stdin)).unwrap();
+
     let query = {
         if args.query.is_none() {
             print!("{}", HELP);
@@ -241,7 +244,7 @@ fn main() -> Result<()> {
         PathBuf::from("yarn.lock")
     };
 
-    if must_read_yarn_lock || atty::is(atty::Stream::Stdin) {
+    if must_read_yarn_lock || *IS_STDIN_TTY.get().unwrap() {
         let mut f = std::fs::File::open(yarn_lock_path)
             .map_err(|e| anyhow!("Cannot open yarn.lock: {}", e))?;
         f.read_to_end(&mut yarn_lock_text)?;
@@ -329,7 +332,7 @@ fn main() -> Result<()> {
 }
 
 fn colorize(s: &str, (r, g, b): (usize, usize, usize)) -> Cow<'_, str> {
-    if s.is_empty() || !atty::is(atty::Stream::Stdout) {
+    if s.is_empty() || !*IS_STDIN_TTY.get().unwrap() {
         Cow::Borrowed(s)
     } else {
         Cow::Owned(format!("\x1b[38;2;{r};{g};{b}m{s}\x1b[0m"))
