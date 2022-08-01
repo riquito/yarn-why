@@ -359,9 +359,10 @@ fn print_tree_node<W: Write>(
 
     let mut namespace = "";
     let mut name = pkg_name;
-    if pkg_name.starts_with('@') && pkg_name.contains('/') {
-        let idx = pkg_name.find('/').unwrap();
-        (namespace, name) = (&pkg_name[..idx], &pkg_name[idx..]);
+    if pkg_name.starts_with('@') {
+        if let Some(idx) = pkg_name.find('/') {
+            (namespace, name) = (&pkg_name[..idx], &pkg_name[idx..]);
+        }
     }
 
     writeln!(
