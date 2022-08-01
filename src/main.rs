@@ -4,6 +4,7 @@ use serde::{Serialize, Serializer};
 use serde_json::Result as SerdeJsonResult;
 use std::borrow::Cow;
 use std::cell::RefCell;
+use std::fmt::Write as _;
 use std::io::{Read, Write};
 use std::path::PathBuf;
 use std::rc::Rc;
@@ -320,13 +321,15 @@ fn main() -> Result<()> {
 
     let tree = convert_paths_to_tree(paths.as_slice());
 
-    if args.json {
-        print_tree_as_json(&tree)?;
+    let output = if args.json {
+        print_tree_as_json(&tree)?
     } else {
-        print_tree(&tree, &mut stdout);
-    }
+        print_tree(&tree)
+    };
 
-    stdout.flush()?;
+    stdout
+        .write_all(output.as_bytes())
+        .expect("Failed to write to stdout");
 
     Ok(())
 }
@@ -340,13 +343,7 @@ fn colorize(s: &str, (r, g, b): (usize, usize, usize)) -> Cow<'_, str> {
     }
 }
 
-fn print_tree_node<W: Write>(
-    node: &Node,
-    level: usize,
-    is_last: bool,
-    cols: Vec<char>,
-    stdout: &mut W,
-) {
+fn print_tree_node(node: &Node, level: usize, is_last: bool, cols: Vec<char>, output: &mut String) {
     let mut prefix = String::new();
 
     for c in cols.iter() {
@@ -367,13 +364,13 @@ fn print_tree_node<W: Write>(
     }
 
     writeln!(
-        stdout,
+        output,
         "{prefix}{symbol}─ {namespace}{name}@{pkg_descriptor}",
         namespace = colorize(namespace, (215, 95, 0)),
         name = colorize(name, (215, 135, 95)),
         pkg_descriptor = colorize(pkg_descriptor, (135, 175, 255))
     )
-    .expect("Failed to write to stdout");
+    .expect("Failed to write to string");
 
     for (i, child) in node.children.iter().enumerate() {
         let mut child_levels = Vec::with_capacity(cols.len() + 1);
@@ -386,30 +383,32 @@ fn print_tree_node<W: Write>(
             level + 1,
             i == node.children.len() - 1,
             child_levels,
-            stdout,
+            output,
         );
     }
 }
 
-fn print_tree<W: Write>(tree: &[Rc<RefCell<Node>>], stdout: &mut W) {
+fn print_tree(tree: &[Rc<RefCell<Node>>]) -> String {
+    let mut output = String::new();
+
     for (i, wrapped_node) in tree.iter().enumerate() {
         if i > 0 && i < tree.len() {
-            writeln!(stdout, "│").expect("Failed to write to stdout");
+            output.push_str("│\n");
         }
         print_tree_node(
             &wrapped_node.as_ref().borrow(),
             0,
             i == tree.len() - 1,
             Vec::new(),
-            stdout,
+            &mut output,
         );
     }
+
+    output
 }
 
-fn print_tree_as_json(tree: &[Rc<RefCell<Node>>]) -> SerdeJsonResult<()> {
-    let j = serde_json::to_string(&tree)?;
-    println!("{}", j);
-    Ok(())
+fn print_tree_as_json(tree: &[Rc<RefCell<Node>>]) -> SerdeJsonResult<String> {
+    serde_json::to_string(&tree)
 }
 
 #[derive(Debug, Serialize)]
