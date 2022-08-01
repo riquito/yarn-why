@@ -31,6 +31,7 @@ Example:
 OPTIONS:
     -d, --max-depth [depth]  Truncate dependencies at that level [Default: 10]
     -D, --no-max-depth       Ignore max-depth (both default and user defined)
+        --(no)-dedup         Display packages at most once [Default: true]
     -j, --json               Format the output as JSON
     -h, --help               Prints this help and exit
     -V, --version            Prints version information
