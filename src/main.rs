@@ -1,4 +1,5 @@
 use anyhow::{anyhow, Result};
+use once_cell::sync::OnceCell;
 use serde::{Serialize, Serializer};
 use serde_json::Result as SerdeJsonResult;
 use std::borrow::Cow;
@@ -41,7 +42,8 @@ LICENSE: GPL-3.0-or-later
 "#
 );
 
-static MAX_PKG_VISITS: usize = 20;
+static MAX_PKG_VISITS_DEFAULT: usize = 20;
+static MAX_PKG_VISITS: OnceCell<usize> = OnceCell::new();
 
 #[derive(Debug)]
 struct Opt {
@@ -94,7 +96,7 @@ fn _build_path_to_dependency<'a>(
         paths.push(complete_path);
     } else {
         for p in parents.iter() {
-            if *visited.get(p).unwrap_or(&0_usize) < MAX_PKG_VISITS {
+            if *visited.get(p).unwrap_or(&0_usize) < *MAX_PKG_VISITS.get().unwrap() {
                 _build_path_to_dependency(p, pkg2parents, curr_path, paths, visited);
             }
         }
@@ -211,6 +213,15 @@ fn main() -> Result<()> {
     if args.version {
         println!("{} {}", env!("CARGO_PKG_NAME"), env!("CARGO_PKG_VERSION"));
         std::process::exit(0);
+    }
+
+    if let Ok(max_pgk_visit_as_str) = std::env::var("MAX_PKG_VISITS") {
+        let max_pgk_visit = max_pgk_visit_as_str
+            .parse::<usize>()
+            .expect("MAX_PKG_VISITS is not a number");
+        MAX_PKG_VISITS.set(max_pgk_visit).unwrap();
+    } else {
+        MAX_PKG_VISITS.set(MAX_PKG_VISITS_DEFAULT).unwrap();
     }
 
     let query = {
@@ -509,6 +520,10 @@ mod tests {
     const PKG_C: Pkg = ("c", "v1");
     const PKG_D: Pkg = ("d", "v1");
 
+    fn init() {
+        MAX_PKG_VISITS.get_or_init(|| MAX_PKG_VISITS_DEFAULT);
+    }
+
     fn mock_pkg2parents_empty<'a>() -> HashMap<&'a Pkg<'a>, ParentsNode<'a>> {
         let pkg2parents: HashMap<&Pkg, ParentsNode> = HashMap::default();
         pkg2parents
@@ -552,6 +567,7 @@ mod tests {
 
     #[test]
     fn pkg_not_found() {
+        init();
         let query: Pkg = ("foo", "1");
         let pkg2parents = mock_pkg2parents_empty();
         let mut paths: Vec<Vec<&Pkg>> = Vec::new();
@@ -565,6 +581,7 @@ mod tests {
 
     #[test]
     fn pkg_no_parents() {
+        init();
         let query = &PKG_A;
         let pkg2parents = mock_pkg2parents_one_element();
         let mut paths: Vec<Vec<&Pkg>> = Vec::new();
@@ -578,6 +595,7 @@ mod tests {
 
     #[test]
     fn pkg_one_parent() {
+        init();
         let query: &Pkg = &PKG_A;
         let pkg2parents = mock_pkg2parents_ab();
         let mut paths: Vec<Vec<&Pkg>> = Vec::new();
@@ -591,6 +609,7 @@ mod tests {
 
     #[test]
     fn pkg_two_parents() {
+        init();
         let query: &Pkg = &PKG_A;
         let pkg2parents = mock_pkg2parents_ab_ac();
         let mut paths: Vec<Vec<&Pkg>> = Vec::new();
@@ -604,6 +623,7 @@ mod tests {
 
     #[test]
     fn pkg_two_branches() {
+        init();
         let query: &Pkg = &PKG_C;
         let pkg2parents = mock_pkg2parents_abc_abdc();
         let mut paths: Vec<Vec<&Pkg>> = Vec::new();
