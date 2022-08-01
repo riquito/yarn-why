@@ -4,6 +4,7 @@
 
 - display the output as an ASCII tree
 - colorize output when using a TTY
+- MAX_PKG_VISITS can be set with an env var
 
 ## [1.0.0-rc2] - 2022-05-10
 
