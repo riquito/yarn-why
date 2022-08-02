@@ -2,9 +2,13 @@
 
 ## [Unreleased]
 
+## [1.0.0-rc3] - 2022-08-01
+
+### Added
 - display the output as an ASCII tree
 - colorize output when using a TTY
 - MAX_PKG_VISITS can be set with an env var
+- remove duplicate results using --dedup
 
 ## [1.0.0-rc2] - 2022-05-10
 

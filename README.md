@@ -55,10 +55,8 @@ Benchmarks run on Thinkpad T460s
 ```
 $ hyperfine 'yarn-why -y yarn.lock lodash'
 Benchmark #1: yarn-why -y yarn.lock lodash
-  Time (mean ± σ):       5.2 ms ±   0.2 ms    [User: 4.2 ms, System: 1.0 ms]
-  Range (min … max):     4.7 ms …   6.6 ms    417 runs
-
-  Warning: Command took less than 5 ms to complete. Results might be inaccurate.
+  Time (mean ± σ):       9.4 ms ±   1.6 ms    [User: 8.3 ms, System: 1.1 ms]
+  Range (min … max):     7.8 ms …  22.7 ms    191 runs
 
 $ hyperfine 'yarn why lodash'
 Benchmark #1: yarn why lodash
@@ -74,8 +72,8 @@ Benchmark #1: yarn why lodash
 
 hyperfine 'yarn-why -y yarn.lock lodash'
 Benchmark #1: yarn-why -y yarn.lock lodash
-  Time (mean ± σ):       6.2 ms ±   0.2 ms    [User: 5.2 ms, System: 1.0 ms]
-  Range (min … max):     5.9 ms …   7.6 ms    351 runs
+  Time (mean ± σ):      11.8 ms ±   0.8 ms    [User: 10.6 ms, System: 1.3 ms]
+  Range (min … max):     9.8 ms …  14.5 ms    179 runs
 ```
 
 ## LICENSE
