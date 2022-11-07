@@ -62,10 +62,10 @@ type Pkg<'a> = (&'a str, &'a str);
 
 fn get_parents<'a>(
     pkg: &'a Pkg<'a>,
-    pkg2parents: &'a HashMap<&'a Pkg<'a>, ParentsNode>,
+    pkg2parents: &'a HashMap<&'a Pkg<'a>, Parents>,
 ) -> Cow<'a, Vec<&'a Pkg<'a>>> {
     if let Some(parents_node) = pkg2parents.get(pkg) {
-        Cow::Borrowed(&parents_node.desc)
+        Cow::Borrowed(&parents_node.0)
     } else {
         Cow::Owned(Vec::new())
     }
@@ -73,7 +73,7 @@ fn get_parents<'a>(
 
 fn _build_path_to_dependency<'a>(
     pkg: &'a Pkg<'a>,
-    pkg2parents: &'a HashMap<&'a Pkg<'a>, ParentsNode>,
+    pkg2parents: &'a HashMap<&'a Pkg<'a>, Parents>,
     curr_path: &mut Vec<&'a Pkg<'a>>,
     paths: &mut Vec<Vec<&'a Pkg<'a>>>,
     visited: &mut HashMap<&'a Pkg<'a>, usize>,
@@ -109,7 +109,7 @@ fn _build_path_to_dependency<'a>(
 
 fn build_path_to_dependency<'a>(
     pkg: &'a Pkg<'a>,
-    pkg2parents: &'a HashMap<&'a Pkg<'a>, ParentsNode>,
+    pkg2parents: &'a HashMap<&'a Pkg<'a>, Parents>,
     paths: &mut Vec<Vec<&'a Pkg<'a>>>,
 ) {
     if !pkg2parents.contains_key(pkg) {
@@ -124,7 +124,7 @@ fn build_path_to_dependency<'a>(
 
 fn why<'a>(
     queries: Vec<&'a Pkg>,
-    pkg2parents: &'a HashMap<&'a Pkg<'a>, ParentsNode>,
+    pkg2parents: &'a HashMap<&'a Pkg<'a>, Parents>,
     entries: &Vec<Entry>,
 ) -> Vec<Vec<&'a Pkg<'a>>> {
     if queries.is_empty() {
@@ -158,9 +158,7 @@ fn why<'a>(
 }
 
 #[derive(Debug)]
-struct ParentsNode<'a> {
-    desc: Vec<&'a (&'a str, &'a str)>,
-}
+struct Parents<'a>(Vec<&'a (&'a str, &'a str)>);
 
 fn get_descriptor_from_cli_arg(arg: &str) -> Option<(&str, &str)> {
     if let Some(idx) = arg.rfind('@') {
@@ -272,18 +270,18 @@ fn main() -> Result<()> {
     let entries = parse_str(std::str::from_utf8(&yarn_lock_text)?)?;
 
     // Build a map descriptor => parent
-    let mut pkg2parents: HashMap<&(&str, &str), ParentsNode> = HashMap::default();
+    let mut pkg2parents: HashMap<&(&str, &str), Parents> = HashMap::default();
     for e in entries.iter() {
         for dep in e.dependencies.iter() {
             if !pkg2parents.contains_key(dep) {
-                let parents_node = ParentsNode { desc: Vec::new() };
+                let parents_node = Parents(Vec::new());
                 pkg2parents.insert(dep, parents_node);
             }
 
             let dep_parents = pkg2parents.get_mut(dep).unwrap();
 
             for d in e.descriptors.iter() {
-                dep_parents.desc.push(d);
+                dep_parents.0.push(d);
             }
         }
 
@@ -528,41 +526,37 @@ mod tests {
         MAX_PKG_VISITS.get_or_init(|| MAX_PKG_VISITS_DEFAULT);
     }
 
-    fn mock_pkg2parents_empty<'a>() -> HashMap<&'a Pkg<'a>, ParentsNode<'a>> {
-        let pkg2parents: HashMap<&Pkg, ParentsNode> = HashMap::default();
+    fn mock_pkg2parents_empty<'a>() -> HashMap<&'a Pkg<'a>, Parents<'a>> {
+        let pkg2parents: HashMap<&Pkg, Parents> = HashMap::default();
         pkg2parents
     }
 
-    fn mock_pkg2parents_one_element<'a>() -> HashMap<&'a Pkg<'a>, ParentsNode<'a>> {
-        let mut pkg2parents: HashMap<&Pkg, ParentsNode> = HashMap::default();
-        let p = ParentsNode { desc: Vec::new() };
+    fn mock_pkg2parents_one_element<'a>() -> HashMap<&'a Pkg<'a>, Parents<'a>> {
+        let mut pkg2parents: HashMap<&Pkg, Parents> = HashMap::default();
+        let p = Parents(Vec::new());
         pkg2parents.insert(&PKG_A, p);
         pkg2parents
     }
 
-    fn mock_pkg2parents_ab<'a>() -> HashMap<&'a Pkg<'a>, ParentsNode<'a>> {
-        let mut pkg2parents: HashMap<&Pkg, ParentsNode> = HashMap::default();
-        let p = ParentsNode { desc: vec![&PKG_B] };
+    fn mock_pkg2parents_ab<'a>() -> HashMap<&'a Pkg<'a>, Parents<'a>> {
+        let mut pkg2parents: HashMap<&Pkg, Parents> = HashMap::default();
+        let p = Parents(vec![&PKG_B]);
         pkg2parents.insert(&PKG_A, p);
         pkg2parents
     }
 
-    fn mock_pkg2parents_ab_ac<'a>() -> HashMap<&'a Pkg<'a>, ParentsNode<'a>> {
-        let mut pkg2parents: HashMap<&Pkg, ParentsNode> = HashMap::default();
-        let p = ParentsNode {
-            desc: vec![&PKG_B, &PKG_C],
-        };
+    fn mock_pkg2parents_ab_ac<'a>() -> HashMap<&'a Pkg<'a>, Parents<'a>> {
+        let mut pkg2parents: HashMap<&Pkg, Parents> = HashMap::default();
+        let p = Parents(vec![&PKG_B, &PKG_C]);
         pkg2parents.insert(&PKG_A, p);
         pkg2parents
     }
 
-    fn mock_pkg2parents_abc_abdc<'a>() -> HashMap<&'a Pkg<'a>, ParentsNode<'a>> {
-        let mut pkg2parents: HashMap<&Pkg, ParentsNode> = HashMap::default();
-        let c_parents = ParentsNode {
-            desc: vec![&PKG_D, &PKG_B],
-        };
-        let d_parents = ParentsNode { desc: vec![&PKG_B] };
-        let b_parents = ParentsNode { desc: vec![&PKG_A] };
+    fn mock_pkg2parents_abc_abdc<'a>() -> HashMap<&'a Pkg<'a>, Parents<'a>> {
+        let mut pkg2parents: HashMap<&Pkg, Parents> = HashMap::default();
+        let c_parents = Parents(vec![&PKG_D, &PKG_B]);
+        let d_parents = Parents(vec![&PKG_B]);
+        let b_parents = Parents(vec![&PKG_A]);
         pkg2parents.insert(&PKG_C, c_parents);
         pkg2parents.insert(&PKG_D, d_parents);
         pkg2parents.insert(&PKG_B, b_parents);
