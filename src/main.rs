@@ -452,7 +452,19 @@ fn _build_tree_with_no_duplicates<'a>(
         }));
         parent.borrow_mut().children.push(new_node.clone());
 
-        if !visited.contains_key(ref_node.pkg) {
+        // Usually we drop children we already visited, but if the children
+        // is a leaf we keep it (so the final user won't have to find which
+        // version of the searched package was being deduplicated.
+        let next_child_is_leaf = ref_node.children.len() == 1
+            && ref_node
+                .children
+                .first()
+                .unwrap()
+                .borrow()
+                .children
+                .is_empty();
+
+        if next_child_is_leaf || !visited.contains_key(ref_node.pkg) {
             visited.insert(ref_node.pkg, true);
             _build_tree_with_no_duplicates(&mut new_node, &ref_node.children, visited)
         }
