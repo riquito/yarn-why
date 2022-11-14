@@ -83,7 +83,9 @@ fn _build_path_to_dependency<'a>(
     let parents = get_parents(pkg, pkg2parents);
 
     if parents.is_empty() {
-        // root dependency (no parents, it must have been defined in package.json)
+        // root package (either we recursed into the root, or we immediately
+        // searched for a package that is in package.json and installed
+        // directly - nothing had it as dependency)
         let mut complete_path = curr_path.clone();
         complete_path.reverse();
 
@@ -303,10 +305,6 @@ fn main() -> Result<()> {
         std::process::exit(1);
     }
 
-    if args.dedup {
-        dedup_paths(&mut paths.as_mut_slice());
-    }
-
     // A bit convoluted, but allow us to have both a sensible default
     // and yet let users ask to go all the way down.
     if !args.no_max_depth {
@@ -317,7 +315,16 @@ fn main() -> Result<()> {
         }
     }
 
-    let tree = convert_paths_to_tree(paths.as_slice());
+    let owned_tree = convert_paths_to_tree(paths.as_slice());
+    let mut tree = &owned_tree;
+    let dedup_tree;
+    let borrowed_dedup_tree;
+
+    if args.dedup {
+        dedup_tree = build_tree_with_no_duplicates(tree);
+        borrowed_dedup_tree = dedup_tree.borrow();
+        tree = &borrowed_dedup_tree.children;
+    }
 
     let output = if args.json {
         print_tree_as_json(&tree)?
@@ -431,34 +438,40 @@ where
     s.serialize_str(&format!("{}@{}", x.0, x.1))
 }
 
-fn dedup_paths(paths: &mut &mut [Vec<&Pkg>]) {
-    let mut idx = 0;
-    let mut visited: HashMap<&Pkg, bool> = HashMap::default();
+fn _build_tree_with_no_duplicates<'a>(
+    parent: &mut Rc<RefCell<Node<'a>>>,
+    children: &[Rc<RefCell<Node<'a>>>],
+    visited: &mut HashMap<&'a Pkg<'a>, bool>,
+) {
+    for node in children.iter() {
+        let ref_node = node.as_ref().borrow();
 
-    let mut num_paths_visited;
-    loop {
-        num_paths_visited = 0;
+        let mut new_node = Rc::new(RefCell::new(Node {
+            children: Vec::new(),
+            pkg: ref_node.pkg,
+        }));
+        parent.borrow_mut().children.push(new_node.clone());
 
-        for p in paths.iter_mut() {
-            if p.len() > idx {
-                if p.len() != idx + 1 {
-                    let pkg = p.get(idx).unwrap();
-                    if visited.contains_key(pkg) {
-                        p.truncate(idx);
-                    } else {
-                        visited.insert(pkg, true);
-                    }
-                }
-                num_paths_visited += 1;
-            }
-        }
-
-        idx += 1;
-
-        if num_paths_visited == 0 {
-            break;
+        if !visited.contains_key(ref_node.pkg) {
+            visited.insert(ref_node.pkg, true);
+            _build_tree_with_no_duplicates(&mut new_node, &ref_node.children, visited)
         }
     }
+}
+
+static ROOT_PKG: (&str, &str) = ("", "");
+
+fn build_tree_with_no_duplicates<'a>(children: &[Rc<RefCell<Node<'a>>>]) -> Rc<RefCell<Node<'a>>> {
+    let mut visited: HashMap<&Pkg, bool> = HashMap::default();
+
+    let mut root = Rc::new(RefCell::new(Node {
+        children: Vec::new(),
+        pkg: &ROOT_PKG,
+    }));
+
+    _build_tree_with_no_duplicates(&mut root, children, &mut visited);
+
+    root
 }
 
 fn convert_paths_to_tree<'a>(paths: &'a [Vec<&Pkg<'a>>]) -> Vec<Rc<RefCell<Node<'a>>>> {
