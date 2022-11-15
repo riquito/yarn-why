@@ -42,6 +42,21 @@ ARGS:
                              The range must match one in yarn.lock
 ```
 
+Example output (searching for `lodash`)
+
+```
+├─ standard@^11.0.0
+│  └─ eslint@~4.18.0
+│     ├─ inquirer@^3.0.6
+│     │  └─ lodash@^4.3.0
+│     ├─ lodash@^4.17.4
+│     └─ table@4.0.2
+│        └─ lodash@^4.17.4
+│
+└─ webpack@3.6.0
+   └─ async@^2.1.2
+      └─ lodash@^4.14.0
+```
 
 ## Benchmarks
 
