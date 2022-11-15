@@ -10,6 +10,10 @@
 - MAX_PKG_VISITS can be set with an env var
 - remove duplicate results using --dedup
 
+### Doc
+- added example output
+- added notes about defaults
+
 ## [1.0.0-rc2] - 2022-05-10
 
 ### Added
