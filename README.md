@@ -18,7 +18,7 @@ cargo install yarn-why
 ## Help
 
 ```
-yarn-why 1.0.0-rc2
+yarn-why 1.0.0-rc3
 
 Usage:
     yarn-why [OPTIONS] package[@range] # read ./yarn.lock
