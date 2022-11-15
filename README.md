@@ -58,6 +58,11 @@ Example output (searching for `lodash`)
       └─ lodash@^4.14.0
 ```
 
+Defaults:
+- branches are truncated at 10 levels depth (see -d / -D to change it).
+- branches already printed are not printed again (search up in the tree for their output). You can get the full tree with --no-dedup.
+- circular dependencies are truncated after 20 iterations (set ENV MAX_PKG_VISITS to change it).
+
 ## Benchmarks
 
 Benchmarks run on Thinkpad T460s
