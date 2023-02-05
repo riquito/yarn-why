@@ -517,6 +517,7 @@ fn convert_paths_to_tree<'a>(paths: &'a [Vec<&Pkg<'a>>]) -> Vec<Rc<RefCell<Node<
 
                 // it must have a parent at this point
                 let cloned_node = node.clone();
+                #[allow(clippy::unnecessary_unwrap)]
                 let parent = nodes.get(prev_pkg.unwrap()).unwrap();
 
                 // did we already add this pkg as children of its parent?
