@@ -348,7 +348,7 @@ fn colorize(s: &str, (r, g, b): (usize, usize, usize)) -> Cow<'_, str> {
     }
 }
 
-fn print_tree_node(node: &Node, level: usize, is_last: bool, cols: Vec<char>, output: &mut String) {
+fn print_tree_node(node: &Node, is_last: bool, cols: Vec<char>, output: &mut String) {
     let mut prefix = String::new();
 
     for c in cols.iter() {
@@ -385,7 +385,6 @@ fn print_tree_node(node: &Node, level: usize, is_last: bool, cols: Vec<char>, ou
 
         print_tree_node(
             &child.as_ref().borrow(),
-            level + 1,
             i == node.children.len() - 1,
             child_levels,
             output,
@@ -402,7 +401,6 @@ fn print_tree(tree: &[Rc<RefCell<Node>>]) -> String {
         }
         print_tree_node(
             &wrapped_node.as_ref().borrow(),
-            0,
             i == tree.len() - 1,
             Vec::new(),
             &mut output,
