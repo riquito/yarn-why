@@ -181,7 +181,7 @@ fn main() -> Result<()> {
     let mut pargs = pico_args::Arguments::from_env();
 
     if pargs.contains(["-h", "--help"]) {
-        print!("{}", HELP);
+        print!("{HELP}");
         std::process::exit(0);
     }
 
@@ -204,7 +204,7 @@ fn main() -> Result<()> {
     let remaining = pargs.finish();
 
     if !remaining.is_empty() {
-        eprintln!("Error: unexpected arguments {:?}", remaining);
+        eprintln!("Error: unexpected arguments {remaining:?}");
         eprintln!(
             "Try '{} --help' for more information.",
             env!("CARGO_PKG_NAME")
@@ -230,7 +230,7 @@ fn main() -> Result<()> {
 
     let query = {
         if args.query.is_none() {
-            print!("{}", HELP);
+            print!("{HELP}");
             std::process::exit(1);
         }
         &args.query.unwrap()
@@ -327,9 +327,9 @@ fn main() -> Result<()> {
     }
 
     let output = if args.json {
-        print_tree_as_json(&tree)?
+        print_tree_as_json(tree)?
     } else {
-        print_tree(&tree)
+        print_tree(tree)
     };
 
     stdout
@@ -494,7 +494,7 @@ fn convert_paths_to_tree<'a>(paths: &'a [Vec<&Pkg<'a>>]) -> Vec<Rc<RefCell<Node<
         let mut prev_pkg: Option<&Pkg> = None;
 
         for (path_idx, pkg) in path.iter().enumerate() {
-            if prev_pkg == None {
+            if prev_pkg.is_none() {
                 // It's a new root, did we already add it?
                 if !nodes.contains_key(pkg) {
                     let node = Rc::new(RefCell::new(Node {

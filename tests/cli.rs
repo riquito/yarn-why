@@ -44,23 +44,23 @@ fn it_fails_and_display_the_help_when_invoked_without_args() {
 
     let assert = cmd.assert().failure().code(1);
     let stdout = std::str::from_utf8(&assert.get_output().stdout).unwrap();
-    assert!(stdout.contains("Usage:"), "Output was: {}", stdout);
+    assert!(stdout.contains("Usage:"), "Output was: {stdout}");
 }
 
 #[test]
 fn it_succeed_and_display_the_help_when_invoked_with_help_option() {
     let mut cmd = Command::cargo_bin(env!("CARGO_PKG_NAME")).unwrap();
 
-    let assert = cmd.args(&["-h"]).assert().success();
+    let assert = cmd.args(["-h"]).assert().success();
     let stdout = std::str::from_utf8(&assert.get_output().stdout).unwrap();
-    assert!(stdout.contains("Usage:"), "Output was: {}", stdout);
+    assert!(stdout.contains("Usage:"), "Output was: {stdout}");
 }
 
 #[test]
 fn it_displays_the_version() {
     let mut cmd = Command::cargo_bin(env!("CARGO_PKG_NAME")).unwrap();
 
-    let assert = cmd.args(&["-V"]).assert().success();
+    let assert = cmd.args(["-V"]).assert().success();
     let stdout = std::str::from_utf8(&assert.get_output().stdout).unwrap();
     assert_eq!(
         concat!(env!("CARGO_PKG_NAME"), " ", env!("CARGO_PKG_VERSION"), "\n"),
@@ -73,7 +73,7 @@ fn it_finds_a_package_with_range() {
     let mut cmd = Command::cargo_bin(env!("CARGO_PKG_NAME")).unwrap();
 
     let assert = cmd
-        .args(&["foolib@1.2.3 || ^2.0.0"])
+        .args(["foolib@1.2.3 || ^2.0.0"])
         .write_stdin(YARN_LOCK_V6_WITH_DEPS)
         .assert();
 
@@ -89,7 +89,7 @@ fn it_finds_a_package_without_range() {
     let mut cmd = Command::cargo_bin(env!("CARGO_PKG_NAME")).unwrap();
 
     let assert = cmd
-        .args(&["foolib"])
+        .args(["foolib"])
         .write_stdin(YARN_LOCK_V6_WITH_DEPS)
         .assert();
 
@@ -105,7 +105,7 @@ fn it_finds_a_package_in_a_yarn_lock_with_only_direct_deps() {
     let mut cmd = Command::cargo_bin(env!("CARGO_PKG_NAME")).unwrap();
 
     let assert = cmd
-        .args(&["foolib"])
+        .args(["foolib"])
         .write_stdin(YARN_LOCK_V6_ONLY_DIRECT_DEPS)
         .assert();
 
@@ -117,7 +117,7 @@ fn it_exit_with_error_if_the_package_cannot_be_found() {
     let mut cmd = Command::cargo_bin(env!("CARGO_PKG_NAME")).unwrap();
 
     let assert = cmd
-        .args(&["not-there"])
+        .args(["not-there"])
         .write_stdin(YARN_LOCK_V6_ONLY_DIRECT_DEPS)
         .assert();
 
