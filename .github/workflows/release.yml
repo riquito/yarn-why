@@ -13,7 +13,7 @@ jobs:
     name: Check if safe to release
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - uses: actions-rs/toolchain@v1
         with:
@@ -58,7 +58,7 @@ jobs:
             asset_name: yarn-why-windows-amd64
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Build project
         run: cargo build --release --locked
@@ -77,7 +77,7 @@ jobs:
     runs-on: macos-latest
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Install ARM target
         run: rustup update && rustup target add aarch64-apple-darwin
