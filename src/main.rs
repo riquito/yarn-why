@@ -148,7 +148,7 @@ fn why<'a>(
         // 2) the package exists in yarn.lock, but is a direct dependency in
         // package.json and we couldn't find it in pkg2parents (since that map
         // contains only packages that are dependencies of something else)
-        let q = queries.get(0).unwrap();
+        let q = queries.first().unwrap();
         for e in entries {
             if e.name == q.0 && e.descriptors.contains(q) {
                 paths = vec![vec![q]];
