@@ -286,12 +286,7 @@ fn main() -> Result<()> {
     let mut pkg2parents: HashMap<&(&str, &str), Parents> = HashMap::default();
     for e in entries.iter() {
         for dep in e.dependencies.iter() {
-            if !pkg2parents.contains_key(dep) {
-                let parents_node = Parents(Vec::new());
-                pkg2parents.insert(dep, parents_node);
-            }
-
-            let dep_parents = pkg2parents.get_mut(dep).unwrap();
+            let dep_parents = pkg2parents.entry(dep).or_insert(Parents(Vec::new()));
 
             for d in e.descriptors.iter() {
                 dep_parents.0.push(d);
