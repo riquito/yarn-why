@@ -12,6 +12,7 @@ __metadata:
   resolution: "foo@workspace:."
   dependencies:
     foolib: 1.2.3 || ^2.0.0
+    buzz: "npm:^1.1.1"
   languageName: unknown
   linkType: soft
 
@@ -19,6 +20,13 @@ __metadata:
   version: 2.0.0
   resolution: "foolib@npm:2.0.0"
   checksum: 123061e52a0b3792c6a0472bf48ca6c337ccb58e92261049e7727a12c326b9627537e2ef8cb4453354d02c763b87c8b516f4eedfad99945c308927285bbc12ba
+  languageName: node
+  linkType: hard
+
+"buzz@npm:^1.1.1":
+  version: 1.1.2
+  resolution: "buzz@npm:1.1.2"
+  checksum: 58e92261049e7727a12c326b9627537e123061e52a0b3792c6a0472bf48ca6c337ccb2ef8cb4453354d02c763b87c8b516f4eedfad99945c308927285bbc12ba
   languageName: node
   linkType: hard
 "#;
@@ -96,6 +104,22 @@ fn it_finds_a_package_without_range() {
     assert.success().stdout(
         r#"└─ foo@.
    └─ foolib@1.2.3 || ^2.0.0
+"#,
+    );
+}
+
+#[test]
+fn it_finds_a_package_whose_dep_is_using_npm_protocol() {
+    let mut cmd = Command::cargo_bin(env!("CARGO_PKG_NAME")).unwrap();
+
+    let assert = cmd
+        .args(["buzz"])
+        .write_stdin(YARN_LOCK_V6_WITH_DEPS)
+        .assert();
+
+    assert.success().stdout(
+        r#"└─ foo@.
+   └─ buzz@^1.1.1
 "#,
     );
 }
