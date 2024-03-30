@@ -10,6 +10,7 @@
 - MAX_PKG_VISITS can be set with an env var
 - remove duplicate results using --dedup
 - fixed a bug detecting dependencies on newer versions of yarn.lock
+- fix duplication caused by dependencies using patch protocol
 
 ## [1.0.0-rc2] - 2022-05-10
 
