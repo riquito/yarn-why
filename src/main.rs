@@ -271,15 +271,29 @@ fn main() -> Result<()> {
 
     let mut entries = parse_str(std::str::from_utf8(&yarn_lock_text)?)?;
 
-    // In yarn-lock-parser the dependencies were meatn to contain
+    // In yarn-lock-parser the dependencies were meant to contain
     // just (name, descriptor), with the descriptor being without the
-    // protocol. It's not the case anymore, so we adjuts it here.
-    entries.iter_mut().for_each(|e| {
-        e.dependencies.iter_mut().for_each(|dep| {
+    // protocol. Turns out it's not always the case, so we adjuts it here.
+    // In addition, the patch protocol contains duplicates for the purpose
+    // of yarn-why, so we must drop them.
+    entries.retain_mut(|e| {
+        e.dependencies.retain_mut(|dep| {
             // XXX here we just check for npm: but there are other protocols
             // out there. In general, we should stop stripping it in yarn-lock-parser
             *dep = (dep.0, dep.1.strip_prefix("npm:").unwrap_or(dep.1));
-        })
+
+            // hacky way to detect patch protocol (we must drop them from entries
+            // otherwise we will get duplicates)
+            !dep.1.contains('#') || dep.1.contains("git")
+        });
+
+        e.descriptors.retain_mut(|descriptor| {
+            // hacky way to detect patch protocol (we must drop them from entries
+            // otherwise we will get duplicates)
+            !descriptor.1.contains('#') || descriptor.1.contains("git")
+        });
+
+        !e.descriptors.is_empty()
     });
 
     // Build a map descriptor => parent
