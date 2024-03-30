@@ -339,11 +339,19 @@ fn main() -> Result<()> {
     let mut tree = &owned_tree;
     let dedup_tree;
     let borrowed_dedup_tree;
+    let single_workspace_tree;
+    let borrowed_single_workspace_tree;
 
     if args.dedup {
         dedup_tree = build_tree_with_no_duplicates(tree);
         borrowed_dedup_tree = dedup_tree.borrow();
         tree = &borrowed_dedup_tree.children;
+    }
+
+    if tree.len() == 1 && tree.first().unwrap().borrow().pkg.1 == "." {
+        single_workspace_tree = tree[0].to_owned();
+        borrowed_single_workspace_tree = single_workspace_tree.borrow();
+        tree = &borrowed_single_workspace_tree.children;
     }
 
     let output = if args.json {
