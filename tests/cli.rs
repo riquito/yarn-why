@@ -153,8 +153,7 @@ fn it_finds_a_package_with_range() {
         .assert();
 
     assert.success().stdout(
-        r#"└─ foo@.
-   └─ foolib@1.2.3 || ^2.0.0
+        r#"└─ foolib@1.2.3 || ^2.0.0
 "#,
     );
 }
@@ -169,8 +168,7 @@ fn it_finds_a_package_without_range() {
         .assert();
 
     assert.success().stdout(
-        r#"└─ foo@.
-   └─ foolib@1.2.3 || ^2.0.0
+        r#"└─ foolib@1.2.3 || ^2.0.0
 "#,
     );
 }
@@ -185,8 +183,7 @@ fn it_finds_a_package_whose_dep_is_using_npm_protocol() {
         .assert();
 
     assert.success().stdout(
-        r#"└─ foo@.
-   └─ buzz@^1.1.1
+        r#"└─ buzz@^1.1.1
 "#,
     );
 }
@@ -225,13 +222,12 @@ fn it_ignores_entries_with_the_patch_protocol() {
         .assert();
 
     assert.success().stdout(
-        r#"└─ foobar@.
-   └─ vite@^5.2.0
-      ├─ fsevents@~2.3.3
-      │  └─ node-gyp@latest
-      └─ rollup@^4.13.0
-         └─ fsevents@~2.3.2
-            └─ node-gyp@latest
+        r#"└─ vite@^5.2.0
+   ├─ fsevents@~2.3.3
+   │  └─ node-gyp@latest
+   └─ rollup@^4.13.0
+      └─ fsevents@~2.3.2
+         └─ node-gyp@latest
 "#,
     );
 }
