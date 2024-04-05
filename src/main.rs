@@ -1,5 +1,6 @@
 use anyhow::{anyhow, Result};
 use once_cell::sync::OnceCell;
+use serde::ser::SerializeTuple;
 use serde::{Serialize, Serializer};
 use serde_json::Result as SerdeJsonResult;
 use std::borrow::Cow;
@@ -316,6 +317,13 @@ fn main() -> Result<()> {
         }
     }
 
+    let mut pkg2entry = HashMap::default();
+    entries.iter().for_each(|e| {
+        for d in e.descriptors.iter() {
+            pkg2entry.insert(d, e);
+        }
+    });
+
     let mut paths = why(queries, &pkg2parents, &entries);
 
     paths.sort();
@@ -335,7 +343,7 @@ fn main() -> Result<()> {
         }
     }
 
-    let owned_tree = convert_paths_to_tree(paths.as_slice());
+    let owned_tree = convert_paths_to_tree(paths.as_slice(), &pkg2entry);
     let mut tree = &owned_tree;
     let dedup_tree;
     let borrowed_dedup_tree;
@@ -387,8 +395,10 @@ fn print_tree_node(node: &Node, is_last: bool, cols: Vec<char>, output: &mut Str
     let symbol = if is_last { '└' } else { '├' };
     let pkg_name = node.pkg.0;
     let pkg_descriptor = node.pkg.1;
+    let pkg_version = node.e.version;
 
     let mut namespace = "";
+    let at = "@";
     let mut name = pkg_name;
     if pkg_name.starts_with('@') {
         if let Some(idx) = pkg_name.find('/') {
@@ -398,10 +408,12 @@ fn print_tree_node(node: &Node, is_last: bool, cols: Vec<char>, output: &mut Str
 
     writeln!(
         output,
-        "{prefix}{symbol}─ {namespace}{name}@{pkg_descriptor}",
+        "{prefix}{symbol}─ {namespace}{name}{at}{pkg_version} (via {pkg_descriptor})",
         namespace = colorize(namespace, (215, 95, 0)),
         name = colorize(name, (215, 135, 95)),
-        pkg_descriptor = colorize(pkg_descriptor, (135, 175, 255))
+        at = colorize(at, (135, 175, 255)),
+        pkg_version = colorize(pkg_version, (135, 175, 255)),
+        pkg_descriptor = colorize(pkg_descriptor, (3, 150, 150))
     )
     .expect("Failed to write to string");
 
@@ -443,6 +455,28 @@ fn print_tree_as_json(tree: &[Rc<RefCell<Node>>]) -> SerdeJsonResult<String> {
 }
 
 #[derive(Debug, Serialize)]
+struct SerializableNode<'a> {
+    #[serde(skip_serializing_if = "serialize_skip_if_children_empty")]
+    children: Vec<Rc<RefCell<Node<'a>>>>,
+    #[serde(serialize_with = "serialize_pkg_as_string")]
+    descriptor: &'a Pkg<'a>,
+    version: &'a str,
+}
+
+impl<'a> From<Node<'a>> for SerializableNode<'a> {
+    fn from(node: Node<'a>) -> Self {
+        Self {
+            children: node.children,
+            descriptor: node.pkg,
+            version: node.e.version,
+        }
+    }
+}
+
+// TODO We can avoid the somewhat expensive cloning by
+// not using SerializableNode
+#[derive(Debug, Serialize, Clone)]
+#[serde(into = "SerializableNode")]
 struct Node<'a> {
     #[serde(skip_serializing_if = "serialize_skip_if_children_empty")]
     children: Vec<Rc<RefCell<Node<'a>>>>,
@@ -451,6 +485,7 @@ struct Node<'a> {
         serialize_with = "serialize_pkg_as_string"
     )]
     pkg: &'a Pkg<'a>,
+    e: &'a Entry<'a>,
 }
 
 fn serialize_skip_if_children_empty<T>(x: &[T]) -> bool {
@@ -461,7 +496,10 @@ fn serialize_pkg_as_string<'a, S>(x: &'a Pkg<'a>, s: S) -> Result<S::Ok, S::Erro
 where
     S: Serializer,
 {
-    s.serialize_str(&format!("{}@{}", x.0, x.1))
+    let mut tup = s.serialize_tuple(2)?;
+    tup.serialize_element(x.0)?;
+    tup.serialize_element(x.1)?;
+    tup.end()
 }
 
 fn _build_tree_with_no_duplicates<'a>(
@@ -475,6 +513,7 @@ fn _build_tree_with_no_duplicates<'a>(
         let mut new_node = Rc::new(RefCell::new(Node {
             children: Vec::new(),
             pkg: ref_node.pkg,
+            e: ref_node.e,
         }));
         parent.borrow_mut().children.push(new_node.clone());
 
@@ -498,6 +537,13 @@ fn _build_tree_with_no_duplicates<'a>(
 }
 
 static ROOT_PKG: (&str, &str) = ("", "");
+static ROOT_ENTRY: Entry = Entry {
+    name: "",
+    version: "",
+    integrity: "",
+    dependencies: Vec::new(),
+    descriptors: Vec::new(),
+};
 
 fn build_tree_with_no_duplicates<'a>(children: &[Rc<RefCell<Node<'a>>>]) -> Rc<RefCell<Node<'a>>> {
     let mut visited: HashMap<&Pkg, bool> = HashMap::default();
@@ -505,6 +551,7 @@ fn build_tree_with_no_duplicates<'a>(children: &[Rc<RefCell<Node<'a>>>]) -> Rc<R
     let mut root = Rc::new(RefCell::new(Node {
         children: Vec::new(),
         pkg: &ROOT_PKG,
+        e: &ROOT_ENTRY,
     }));
 
     _build_tree_with_no_duplicates(&mut root, children, &mut visited);
@@ -512,7 +559,10 @@ fn build_tree_with_no_duplicates<'a>(children: &[Rc<RefCell<Node<'a>>>]) -> Rc<R
     root
 }
 
-fn convert_paths_to_tree<'a>(paths: &'a [Vec<&Pkg<'a>>]) -> Vec<Rc<RefCell<Node<'a>>>> {
+fn convert_paths_to_tree<'a>(
+    paths: &'a [Vec<&Pkg<'a>>],
+    pkg2entry: &'a HashMap<&(&str, &str), &Entry<'a>>,
+) -> Vec<Rc<RefCell<Node<'a>>>> {
     let mut nodes: HashMap<&Pkg, Rc<RefCell<Node>>> = HashMap::default();
     let mut output: Vec<Rc<RefCell<Node>>> = Vec::new();
 
@@ -526,6 +576,7 @@ fn convert_paths_to_tree<'a>(paths: &'a [Vec<&Pkg<'a>>]) -> Vec<Rc<RefCell<Node<
                     let node = Rc::new(RefCell::new(Node {
                         children: Vec::new(),
                         pkg,
+                        e: pkg2entry.get(pkg).unwrap(),
                     }));
 
                     output.push(node.clone());
@@ -540,6 +591,7 @@ fn convert_paths_to_tree<'a>(paths: &'a [Vec<&Pkg<'a>>]) -> Vec<Rc<RefCell<Node<
                     Rc::new(RefCell::new(Node {
                         children: Vec::new(),
                         pkg,
+                        e: pkg2entry.get(pkg).unwrap(),
                     }))
                 });
 
