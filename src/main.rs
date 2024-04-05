@@ -1,5 +1,6 @@
 use anyhow::{anyhow, Result};
 use once_cell::sync::OnceCell;
+use semver::{Version, VersionReq};
 use serde::ser::SerializeTuple;
 use serde::{Serialize, Serializer};
 use serde_json::Result as SerdeJsonResult;
@@ -35,6 +36,8 @@ OPTIONS:
     -h, --help               Prints this help and exit
     -V, --version            Prints version information
     -y, --yarn-lock-file     Path to a yarn.lock file to parse
+    --filter [descriptors]   Keep only matching versions
+                             (e.g. --filter '>=1.3.0, <2.0.0')
 
 ARGS:
     package[@range]          Package to search for, with or without range.
@@ -57,6 +60,7 @@ struct Opt {
     no_max_depth: bool,
     query: Option<String>,
     yarn_lock_path: Option<PathBuf>,
+    filter: Option<VersionReq>,
 }
 
 type Pkg<'a> = (&'a str, &'a str);
@@ -200,6 +204,7 @@ fn main() -> Result<()> {
             .or(Some(10)),
         yarn_lock_path: pargs.opt_value_from_os_str(["-y", "--yarn-lock-path"], parse_path)?,
         query: pargs.free_from_str().ok(),
+        filter: pargs.opt_value_from_fn("--filter", VersionReq::parse)?,
     };
 
     let remaining = pargs.finish();
@@ -271,6 +276,19 @@ fn main() -> Result<()> {
     }
 
     let mut entries = parse_str(std::str::from_utf8(&yarn_lock_text)?)?;
+
+    if args.filter.is_some() {
+        let req = args.filter.as_ref().unwrap();
+        entries.retain(|e| {
+            if e.name == query.as_str() {
+                let v = Version::parse(e.version);
+                // if we can't parse e.version, let's keep the entry
+                return v.is_err() || req.matches(&v.unwrap());
+            }
+
+            true
+        })
+    }
 
     // In yarn-lock-parser the dependencies were meant to contain
     // just (name, descriptor), with the descriptor being without the
