@@ -153,7 +153,7 @@ fn it_finds_a_package_with_range() {
         .assert();
 
     assert.success().stdout(
-        r#"└─ foolib@1.2.3 || ^2.0.0
+        r#"└─ foolib@2.0.0 (via 1.2.3 || ^2.0.0)
 "#,
     );
 }
@@ -168,7 +168,7 @@ fn it_finds_a_package_without_range() {
         .assert();
 
     assert.success().stdout(
-        r#"└─ foolib@1.2.3 || ^2.0.0
+        r#"└─ foolib@2.0.0 (via 1.2.3 || ^2.0.0)
 "#,
     );
 }
@@ -183,7 +183,7 @@ fn it_finds_a_package_whose_dep_is_using_npm_protocol() {
         .assert();
 
     assert.success().stdout(
-        r#"└─ buzz@^1.1.1
+        r#"└─ buzz@1.1.2 (via ^1.1.1)
 "#,
     );
 }
@@ -197,7 +197,9 @@ fn it_finds_a_package_in_a_yarn_lock_with_only_direct_deps() {
         .write_stdin(YARN_LOCK_V6_ONLY_DIRECT_DEPS)
         .assert();
 
-    assert.success().stdout("└─ foolib@1.2.3 || ^2.0.0\n");
+    assert
+        .success()
+        .stdout("└─ foolib@2.0.0 (via 1.2.3 || ^2.0.0)\n");
 }
 
 #[test]
@@ -222,12 +224,12 @@ fn it_ignores_entries_with_the_patch_protocol() {
         .assert();
 
     assert.success().stdout(
-        r#"└─ vite@^5.2.0
-   ├─ fsevents@~2.3.3
-   │  └─ node-gyp@latest
-   └─ rollup@^4.13.0
-      └─ fsevents@~2.3.2
-         └─ node-gyp@latest
+        r#"└─ vite@5.2.4 (via ^5.2.0)
+   ├─ fsevents@2.3.3 (via ~2.3.3)
+   │  └─ node-gyp@10.0.1 (via latest)
+   └─ rollup@4.13.0 (via ^4.13.0)
+      └─ fsevents@2.3.3 (via ~2.3.2)
+         └─ node-gyp@10.0.1 (via latest)
 "#,
     );
 }
