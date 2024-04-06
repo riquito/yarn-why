@@ -36,26 +36,44 @@ OPTIONS:
     -h, --help               Prints this help and exit
     -V, --version            Prints version information
     -y, --yarn-lock-file     Path to a yarn.lock file to parse
+    --filter [descriptors]   Keep only matching versions
+                             (e.g. --filter '>=1.3.0, <2.0.0')
 
 ARGS:
     package[@range]          Package to search for, with or without range.
                              The range must match one in yarn.lock
 ```
 
-Example output (searching for `lodash`)
+Example output (searching for `fs-minipass`)
 
+```bash
+└─ vite@5.2.4 (via ^5.2.0)
+   ├─ fsevents@2.3.3 (via ~2.3.3)
+   │  └─ node-gyp@10.0.1 (via latest)
+   │     ├─ make-fetch-happen@13.0.0 (via ^13.0.0)
+   │     │  └─ cacache@18.0.2 (via ^18.0.0)
+   │     │     ├─ fs-minipass@3.0.3 (via ^3.0.0)
+   │     │     └─ tar@6.2.1 (via ^6.1.11)
+   │     │        └─ fs-minipass@2.1.0 (via ^2.0.0)
+   │     └─ tar@6.2.1 (via ^6.1.2)
+   │        └─ fs-minipass@2.1.0 (via ^2.0.0)
+   └─ rollup@4.13.0 (via ^4.13.0)
+      └─ fsevents@2.3.3 (via ~2.3.2)
+         └─ node-gyp@10.0.1 (via latest)
 ```
-├─ standard@^11.0.0
-│  └─ eslint@~4.18.0
-│     ├─ inquirer@^3.0.6
-│     │  └─ lodash@^4.3.0
-│     ├─ lodash@^4.17.4
-│     └─ table@4.0.2
-│        └─ lodash@^4.17.4
-│
-└─ webpack@3.6.0
-   └─ async@^2.1.2
-      └─ lodash@^4.14.0
+
+Similar search, but filtered for `fs-minipass --filter '>=3.0, <4.0.0'`
+
+```bash
+└─ vite@5.2.4 (via ^5.2.0)
+   ├─ fsevents@2.3.3 (via ~2.3.3)
+   │  └─ node-gyp@10.0.1 (via latest)
+   │     └─ make-fetch-happen@13.0.0 (via ^13.0.0)
+   │        └─ cacache@18.0.2 (via ^18.0.0)
+   │           └─ fs-minipass@3.0.3 (via ^3.0.0)
+   └─ rollup@4.13.0 (via ^4.13.0)
+      └─ fsevents@2.3.3 (via ~2.3.2)
+         └─ node-gyp@10.0.1 (via latest)
 ```
 
 Defaults:
@@ -65,35 +83,35 @@ Defaults:
 
 ## Benchmarks
 
-Benchmarks run on Thinkpad T460s
-- node 17.9.0
-- yarn 1.22.18 / yarn 3.2.0
+Benchmarks run on Framework Laptop 14 AMD Ryzen 7 7840U
+- node 21.7.1
+- yarn 1.22.22 / yarn 4.1.0
 - using [renovate 35.45.5 yarn.lock file](https://github.com/renovatebot/renovate/blob/32.45.5/yarn.lock) (v1 first, then updating it)
 
 (had to use -y because hyperfine would trigger stdin input)
 
-```
-$ hyperfine 'yarn-why -y yarn.lock lodash'
-Benchmark #1: yarn-why -y yarn.lock lodash
-  Time (mean ± σ):       9.4 ms ±   1.6 ms    [User: 8.3 ms, System: 1.1 ms]
-  Range (min … max):     7.8 ms …  22.7 ms    191 runs
+```bash
+$ hyperfine -w 3 './target/release/yarn-why lodash' # yarn.lock v1
+Benchmark 1: ./target/release/yarn-why lodash
+  Time (mean ± σ):       4.9 ms ±   0.6 ms    [User: 3.8 ms, System: 1.1 ms]
+  Range (min … max):     2.3 ms …   7.8 ms    398 runs
 
-$ hyperfine 'yarn why lodash'
-Benchmark #1: yarn why lodash
-  Time (mean ± σ):      1.012 s ±  0.012 s    [User: 1.686 s, System: 0.101 s]
-  Range (min … max):    0.994 s …  1.026 s    10 runs
+$ hyperfine -w 3 'yarn why lodash' # yarn v1.22.22 / yarn.lock v1
+Benchmark 1: yarn why lodash
+  Time (mean ± σ):     416.0 ms ±  76.7 ms    [User: 691.7 ms, System: 75.0 ms]
+  Range (min … max):   367.9 ms … 608.7 ms    10 runs
 
-# again, after updating yarn.lock using `yarn 3.2.0`
+# again, after updating the same yarn.lock to v8 using `yarn 4.1.0`
 
-$ hyperfine 'yarn why lodash'
-Benchmark #1: yarn why lodash
- ⠏ Current estimate: 45.455 s     █████████████████████████████████████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░ ETA 00:05:17
-^C # was taking too long, I stopped it
+$ hyperfine -w 3 './target/release/yarn-why lodash' # yarn.lock v8
+Benchmark 1: ./target/release/yarn-why lodash
+  Time (mean ± σ):       6.0 ms ±   0.6 ms    [User: 4.6 ms, System: 1.4 ms]
+  Range (min … max):     3.6 ms …   8.5 ms    340 runs
 
-hyperfine 'yarn-why -y yarn.lock lodash'
-Benchmark #1: yarn-why -y yarn.lock lodash
-  Time (mean ± σ):      11.8 ms ±   0.8 ms    [User: 10.6 ms, System: 1.3 ms]
-  Range (min … max):     9.8 ms …  14.5 ms    179 runs
+$ hyperfine 'yarn why lodash' # yarn v4.1.0 / yarn.lock v8
+Benchmark 1: yarn why lodash
+  Time (mean ± σ):     295.0 ms ±  57.7 ms    [User: 316.1 ms, System: 58.1 ms]
+  Range (min … max):   229.9 ms … 361.0 ms    10 runs
 ```
 
 ## LICENSE
