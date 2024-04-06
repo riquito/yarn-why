@@ -44,7 +44,7 @@ ARGS:
                              The range must match one in yarn.lock
 ```
 
-Example output (searching for `fs-minipass`)
+Example output, searching for `fs-minipass`
 
 ```bash
 └─ vite@5.2.4 (via ^5.2.0)
@@ -87,8 +87,6 @@ Benchmarks run on Framework Laptop 14 AMD Ryzen 7 7840U
 - node 21.7.1
 - yarn 1.22.22 / yarn 4.1.0
 - using [renovate 35.45.5 yarn.lock file](https://github.com/renovatebot/renovate/blob/32.45.5/yarn.lock) (v1 first, then updating it)
-
-(had to use -y because hyperfine would trigger stdin input)
 
 ```bash
 $ hyperfine -w 3 './target/release/yarn-why lodash' # yarn.lock v1
