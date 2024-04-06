@@ -6,9 +6,12 @@
 
 ### Added
 - display the output as an ASCII tree
+- new option `--filter`, to limit which versions to search for
+- new ption `--dedup` to remove duplicate results
 - colorize output when using a TTY
-- MAX_PKG_VISITS can be set with an env var
-- remove duplicate results using --dedup
+- env var MAX_PKG_VISITS can be set to bypass hypotetical infinite loops.
+  It stops searching children of a package when it was visited already more than
+  MAX_PKG_VISITS times
 - fixed a bug detecting dependencies on newer versions of yarn.lock
 - fix duplication caused by dependencies using patch protocol
 
