@@ -21,12 +21,14 @@ cargo install yarn-why
 yarn-why 1.0.0-rc3
 
 Usage:
-    yarn-why [OPTIONS] package[@range] # read ./yarn.lock
-    yarn-why [OPTIONS] package[@range] < /path/to/yarn.lock
-    yarn-why [OPTIONS] package[@range] -y /path/to/yarn.lock
+    yarn-why [OPTIONS] package [range] # read ./yarn.lock
+    yarn-why [OPTIONS] package [range] < /path/to/yarn.lock
+    yarn-why [OPTIONS] package [range] -y /path/to/yarn.lock
 
 Example:
-    yarn-why lodash@^4.17.15
+    yarn-why lodash 4.17.15
+    yarn-why lodash ^4.17.0
+    yarn-why lodash '>=4.0, <5.0'
 
 OPTIONS:
     -d, --max-depth [depth]  Truncate dependencies at that level [Default: 10]
@@ -36,8 +38,6 @@ OPTIONS:
     -h, --help               Prints this help and exit
     -V, --version            Prints version information
     -y, --yarn-lock-file     Path to a yarn.lock file to parse
-    --filter [descriptors]   Keep only matching versions
-                             (e.g. --filter '>=1.3.0, <2.0.0')
 
 ARGS:
     package[@range]          Package to search for, with or without range.
@@ -83,7 +83,7 @@ Defaults:
 
 ## Benchmarks
 
-Benchmarks run on Framework Laptop 14 AMD Ryzen 7 7840U
+Benchmarks run on Framework Laptop 13 AMD Ryzen 7 7840U
 - node 21.7.1
 - yarn 1.22.22 / yarn 4.1.0
 - using [renovate 35.45.5 yarn.lock file](https://github.com/renovatebot/renovate/blob/32.45.5/yarn.lock) (v1 first, then updating it)
