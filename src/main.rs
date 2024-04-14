@@ -65,6 +65,11 @@ struct Opt {
 
 type Pkg<'a> = (&'a str, &'a str);
 
+/// get_parents(...) returns the parent packages for a
+/// given package by looking it up in a hashmap.
+///
+/// If found, it returns a borrowed reference to the stored
+/// parent packages. If not found, it returns an owned empty vector.
 fn get_parents<'a>(
     pkg: &'a Pkg<'a>,
     pkg2parents: &'a HashMap<&'a Pkg<'a>, Parents>,
@@ -114,6 +119,10 @@ fn _build_path_to_dependency<'a>(
     curr_path.pop();
 }
 
+/// Performs a depth-first traversal of the dependency graph
+/// to build up all unique paths from dependencies to the
+/// queried package.
+/// `paths` contains the final output paths discovered.
 fn build_path_to_dependency<'a>(
     pkg: &'a Pkg<'a>,
     pkg2parents: &'a HashMap<&'a Pkg<'a>, Parents>,
