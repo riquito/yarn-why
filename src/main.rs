@@ -276,18 +276,6 @@ fn main() -> Result<()> {
 
     let stdout = std::io::stdout();
     let mut stdout = std::io::BufWriter::with_capacity(32 * 1024, stdout.lock());
-
-    let mut queries: Vec<&(&str, &str)> = Vec::new();
-
-    let maybe_cli_descriptor = get_descriptor_from_cli_arg(query);
-    let search_for_descriptors = maybe_cli_descriptor.is_none();
-    let cli_descriptor: (&str, &str);
-
-    if let Some(d) = maybe_cli_descriptor {
-        cli_descriptor = d;
-        queries.push(&cli_descriptor);
-    }
-
     let mut entries = parse_str(std::str::from_utf8(&yarn_lock_text)?)?;
 
     if args.filter.is_some() {
@@ -330,6 +318,9 @@ fn main() -> Result<()> {
 
     // Build a map descriptor => parent
     let mut pkg2parents: HashMap<&(&str, &str), Parents> = HashMap::default();
+    // Keep which descriptors are used for the package we are searching for
+    let mut queries: Vec<&(&str, &str)> = Vec::new();
+
     for e in entries.iter() {
         for dep in e.dependencies.iter() {
             let dep_parents = pkg2parents.entry(dep).or_insert(Parents(Vec::new()));
@@ -341,7 +332,9 @@ fn main() -> Result<()> {
 
         // "reuse the cycle" to find the descriptors used for the package
         // we are searching for (the package could have multiple entries)
-        if search_for_descriptors && e.name == query {
+        // Descriptors are used at most once among all the entries of a package,
+        // so we can't find duplicates.
+        if e.name == query {
             for d in e.descriptors.iter() {
                 queries.push(d);
             }
