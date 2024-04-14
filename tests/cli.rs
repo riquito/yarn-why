@@ -148,7 +148,7 @@ fn it_finds_a_package_with_range() {
     let mut cmd = Command::cargo_bin(env!("CARGO_PKG_NAME")).unwrap();
 
     let assert = cmd
-        .args(["foolib@1.2.3 || ^2.0.0"])
+        .args(["foolib", ">=1.2.3, <3"])
         .write_stdin(YARN_LOCK_V6_WITH_DEPS)
         .assert();
 

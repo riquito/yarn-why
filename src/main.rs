@@ -21,12 +21,14 @@ const HELP: &str = concat!(
     r#"
 
 Usage:
-    yarn-why [OPTIONS] package[@range] # read ./yarn.lock
-    yarn-why [OPTIONS] package[@range] < /path/to/yarn.lock
-    yarn-why [OPTIONS] package[@range] -y /path/to/yarn.lock
+    yarn-why [OPTIONS] package [range] # read ./yarn.lock
+    yarn-why [OPTIONS] package [range] < /path/to/yarn.lock
+    yarn-why [OPTIONS] package [range] -y /path/to/yarn.lock
 
 Example:
-    yarn-why lodash@^4.17.15
+    yarn-why lodash 4.17.15
+    yarn-why lodash ^4.17.0
+    yarn-why lodash '>=4.0, <5.0'
 
 OPTIONS:
     -d, --max-depth [depth]  Truncate dependencies at that level [Default: 10]
@@ -36,8 +38,6 @@ OPTIONS:
     -h, --help               Prints this help and exit
     -V, --version            Prints version information
     -y, --yarn-lock-file     Path to a yarn.lock file to parse
-    --filter [descriptors]   Keep only matching versions
-                             (e.g. --filter '>=1.3.0, <2.0.0')
 
 ARGS:
     package[@range]          Package to search for, with or without range.
@@ -204,7 +204,11 @@ fn main() -> Result<()> {
             .or(Some(10)),
         yarn_lock_path: pargs.opt_value_from_os_str(["-y", "--yarn-lock-path"], parse_path)?,
         query: pargs.free_from_str().ok(),
-        filter: pargs.opt_value_from_fn("--filter", VersionReq::parse)?,
+        filter: pargs
+            .opt_free_from_str::<String>()?
+            .as_deref()
+            .map(VersionReq::parse)
+            .transpose()?,
     };
 
     let remaining = pargs.finish();
