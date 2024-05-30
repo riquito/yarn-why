@@ -5,10 +5,12 @@
 - yarn-why now takes a second optional argument to limit which versions to search for
 - fixed a bug detecting dependencies on newer versions of yarn.lock
 - fix duplication caused by dependencies using patch protocol
+- support monorepos
 
 ## [1.0.0-rc3] - 2022-08-01
 
 ### Added
+
 - display the output as an ASCII tree
 - new option `--dedup` to remove duplicate results
 - colorize output when using a TTY
@@ -19,14 +21,22 @@
 ## [1.0.0-rc2] - 2022-05-10
 
 ### Added
+
 - add option -y to to read yarn.lock from a given path
+
 ### Doc
+
 - add some benchmarks
 - better help output
+
 ### CI
+
 - automatically merge dependencies that pass tests
+
 ### Chore
+
 - updated dependencies
 
 ## [1.0.0-rc1] - 2022-05-02
+
 - first release
