@@ -176,17 +176,6 @@ fn why<'a>(
 #[derive(Debug)]
 struct Parents<'a>(Vec<&'a (&'a str, &'a str)>);
 
-fn get_descriptor_from_cli_arg(arg: &str) -> Option<(&str, &str)> {
-    if let Some(idx) = arg.rfind('@') {
-        // skip @foo/bar, keep @foo/bar@1.0.0
-        if idx > 0 {
-            return Some((&arg[0..idx], &arg[idx + 1..]));
-        }
-    }
-
-    None
-}
-
 fn parse_path(s: &std::ffi::OsStr) -> Result<std::path::PathBuf, &'static str> {
     Ok(s.into())
 }
