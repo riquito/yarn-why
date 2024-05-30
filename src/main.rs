@@ -291,6 +291,9 @@ fn main() -> Result<()> {
             // out there. In general, we should stop stripping it in yarn-lock-parser
             *dep = (dep.0, dep.1.strip_prefix("npm:").unwrap_or(dep.1));
 
+            // XXX Turns out we need to also strip `worskpace:`
+            *dep = (dep.0, dep.1.strip_prefix("workspace:").unwrap_or(dep.1));
+
             // hacky way to detect patch protocol (we must drop them from entries
             // otherwise we will get duplicates)
             !dep.1.contains('#') || dep.1.contains("git")
