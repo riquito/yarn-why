@@ -1,5 +1,6 @@
 use anyhow::{anyhow, Result};
 use once_cell::sync::OnceCell;
+use records::iter_flat_dependencies;
 use semver::{Version, VersionReq};
 use serde::ser::SerializeTuple;
 use serde::{Serialize, Serializer};
@@ -11,6 +12,8 @@ use std::io::{Read, Write};
 use std::path::PathBuf;
 use std::rc::Rc;
 use yarn_lock_parser::{parse_str, Entry};
+
+mod records;
 
 extern crate fxhash;
 use fxhash::FxHashMap as HashMap;
@@ -38,6 +41,7 @@ OPTIONS:
     -h, --help               Prints this help and exit
     -V, --version            Prints version information
     -y, --yarn-lock-file     Path to a yarn.lock file to parse
+        --print-records      Prints every dependency as JSONL
 
 ARGS:
     package[@range]          Package to search for, with or without range.
@@ -61,6 +65,7 @@ struct Opt {
     query: Option<String>,
     yarn_lock_path: Option<PathBuf>,
     filter: Option<VersionReq>,
+    print_records: bool,
 }
 
 type Pkg<'a> = (&'a str, &'a str);
@@ -192,7 +197,7 @@ fn main() -> Result<()> {
     let mut dedup: bool = pargs.contains(["-X", "--dedup"]);
     dedup = !pargs.contains(["-N", "--no-dedup"]);
 
-    let args = Opt {
+    let mut args = Opt {
         version: pargs.contains(["-V", "--version"]),
         json: pargs.contains(["-j", "--json"]),
         dedup,
@@ -201,6 +206,7 @@ fn main() -> Result<()> {
             .opt_value_from_str(["-d", "--max-depth"])?
             .or(Some(10)),
         yarn_lock_path: pargs.opt_value_from_os_str(["-y", "--yarn-lock-path"], parse_path)?,
+        print_records: pargs.contains("--print-records"),
         query: pargs.free_from_str().ok(),
         filter: pargs
             .opt_free_from_str::<String>()?
@@ -208,6 +214,13 @@ fn main() -> Result<()> {
             .map(VersionReq::parse)
             .transpose()?,
     };
+
+    if args.print_records {
+        // Set a dummy query, won't be used.
+        // It's an hack until I find the time and will to refactor
+        // the code to better separate print_records.
+        args.query = Some("!dummy!".into());
+    }
 
     let remaining = pargs.finish();
 
@@ -291,7 +304,7 @@ fn main() -> Result<()> {
             // out there. In general, we should stop stripping it in yarn-lock-parser
             *dep = (dep.0, dep.1.strip_prefix("npm:").unwrap_or(dep.1));
 
-            // XXX Turns out we need to also strip `worskpace:`
+            // XXX Turns out we need to also strip `workspace:`
             *dep = (dep.0, dep.1.strip_prefix("workspace:").unwrap_or(dep.1));
 
             // hacky way to detect patch protocol (we must drop them from entries
@@ -307,6 +320,11 @@ fn main() -> Result<()> {
 
         !e.descriptors.is_empty()
     });
+
+    if args.print_records {
+        print_records(&mut stdout, entries.as_slice())?;
+        return Ok(());
+    }
 
     // Build a map descriptor => parent
     let mut pkg2parents: HashMap<&(&str, &str), Parents> = HashMap::default();
@@ -446,6 +464,17 @@ fn print_tree_node(node: &Node, is_last: bool, cols: Vec<char>, output: &mut Str
             output,
         );
     }
+}
+
+fn print_records<W: Write>(stdout: &mut W, entries: &[Entry]) -> Result<()> {
+    for record in iter_flat_dependencies(entries) {
+        writeln!(
+            stdout,
+            "{}",
+            serde_json::to_string(&record).expect("could not serialize Entry to JSON")
+        )?;
+    }
+    Ok(())
 }
 
 fn print_tree(tree: &[Rc<RefCell<Node>>]) -> String {
