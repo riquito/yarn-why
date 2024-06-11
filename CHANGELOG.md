@@ -6,6 +6,7 @@
 - fixed a bug detecting dependencies on newer versions of yarn.lock
 - fix duplication caused by dependencies using patch protocol
 - support monorepos
+- add a new option --print-records to get a JSONL list of what's installed
 
 ## [1.0.0-rc3] - 2022-08-01
 
