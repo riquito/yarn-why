@@ -8,7 +8,7 @@ use serde_json::Result as SerdeJsonResult;
 use std::borrow::Cow;
 use std::cell::RefCell;
 use std::fmt::Write as _;
-use std::io::{Read, Write};
+use std::io::{IsTerminal, Read, Write};
 use std::path::PathBuf;
 use std::rc::Rc;
 use yarn_lock_parser::{parse_str, Entry};
@@ -247,7 +247,7 @@ fn main() -> Result<()> {
         MAX_PKG_VISITS.set(MAX_PKG_VISITS_DEFAULT).unwrap();
     }
 
-    IS_STDIN_TTY.set(atty::is(atty::Stream::Stdin)).unwrap();
+    IS_STDIN_TTY.set(std::io::stdin().is_terminal()).unwrap();
 
     let query = {
         if args.query.is_none() {
