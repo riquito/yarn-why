@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [1.1.0] - 2024-09-20
+
 - yarn-why now takes a second optional argument to limit which versions to search for
 - fixed a bug detecting dependencies on newer versions of yarn.lock
 - fix duplication caused by dependencies using patch protocol
