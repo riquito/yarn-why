@@ -25,7 +25,7 @@ const HELP: &str = concat!(
 
 Usage:
     yarn-why [OPTIONS] package [range] # read ./yarn.lock
-    yarn-why [OPTIONS] package [range] < /path/to/yarn.lock
+    yarn-why [OPTIONS] package [range] < cat /path/to/yarn.lock
     yarn-why [OPTIONS] package [range] -y /path/to/yarn.lock
 
 Example:

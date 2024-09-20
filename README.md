@@ -22,7 +22,7 @@ yarn-why 1.0.0-rc3
 
 Usage:
     yarn-why [OPTIONS] package [range] # read ./yarn.lock
-    yarn-why [OPTIONS] package [range] < /path/to/yarn.lock
+    yarn-why [OPTIONS] package [range] < cat /path/to/yarn.lock
     yarn-why [OPTIONS] package [range] -y /path/to/yarn.lock
 
 Example:
@@ -38,6 +38,8 @@ OPTIONS:
     -h, --help               Prints this help and exit
     -V, --version            Prints version information
     -y, --yarn-lock-file     Path to a yarn.lock file to parse
+        --print-records      Prints every dependency as JSONL
+
 
 ARGS:
     package[@range]          Package to search for, with or without range.
