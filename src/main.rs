@@ -42,6 +42,7 @@ OPTIONS:
     -V, --version            Prints version information
     -y, --yarn-lock-file     Path to a yarn.lock file to parse
         --print-records      Prints every dependency as JSONL
+        --full-tree          Render the full tree of dependencies
 
 ARGS:
     package[@range]          Package to search for, with or without range.
@@ -66,6 +67,7 @@ struct Opt {
     yarn_lock_path: Option<PathBuf>,
     filter: Option<VersionReq>,
     print_records: bool,
+    tree: bool,
 }
 
 type Pkg<'a> = (&'a str, &'a str);
@@ -207,6 +209,7 @@ fn main() -> Result<()> {
             .or(Some(10)),
         yarn_lock_path: pargs.opt_value_from_os_str(["-y", "--yarn-lock-path"], parse_path)?,
         print_records: pargs.contains("--print-records"),
+        tree: pargs.contains("--tree"),
         query: pargs.free_from_str().ok(),
         filter: pargs
             .opt_free_from_str::<String>()?
@@ -215,7 +218,7 @@ fn main() -> Result<()> {
             .transpose()?,
     };
 
-    if args.print_records {
+    if args.print_records || args.tree {
         // Set a dummy query, won't be used.
         // It's an hack until I find the time and will to refactor
         // the code to better separate print_records.
@@ -358,27 +361,38 @@ fn main() -> Result<()> {
         }
     });
 
-    let mut paths = why(queries, &pkg2parents, &entries);
+    let paths = if args.tree {
+        Vec::new()
+    } else {
+        let mut paths = why(queries, &pkg2parents, &entries);
 
-    paths.sort();
+        paths.sort();
 
-    if paths.is_empty() {
-        println!("Package not found");
-        std::process::exit(1);
-    }
+        if paths.is_empty() {
+            println!("Package not found");
+            std::process::exit(1);
+        }
 
-    // A bit convoluted, but allow us to have both a sensible default
-    // and yet let users ask to go all the way down.
-    if !args.no_max_depth {
-        if let Some(max_depth) = args.max_depth {
-            for p in paths.iter_mut() {
-                p.truncate(max_depth);
+        // A bit convoluted, but allow us to have both a sensible default
+        // and yet let users ask to go all the way down.
+        if !args.no_max_depth {
+            if let Some(max_depth) = args.max_depth {
+                for p in paths.iter_mut() {
+                    p.truncate(max_depth);
+                }
             }
         }
-    }
+        paths
+    };
 
-    let owned_tree = convert_paths_to_tree(paths.as_slice(), &pkg2entry);
+    let owned_tree = if args.tree {
+        full_tree(&entries, &pkg2entry)
+    } else {
+        let sliced_paths = paths.as_slice();
+        convert_paths_to_tree(sliced_paths, &pkg2entry)
+    };
     let mut tree = &owned_tree;
+
     let dedup_tree;
     let borrowed_dedup_tree;
     let single_workspace_tree;
@@ -407,6 +421,54 @@ fn main() -> Result<()> {
         .expect("Failed to write to stdout");
 
     Ok(())
+}
+
+// Build a tree out of all the entries.
+// The children may contain duplicates and cycles
+fn full_tree<'a>(
+    entries: &'a Vec<Entry<'a>>,
+    pkg2entry: &'a HashMap<&(&str, &str), &Entry<'a>>,
+) -> Vec<Rc<RefCell<Node<'a>>>> {
+    let mut nodes: HashMap<Pkg, Rc<RefCell<Node>>> = HashMap::default();
+    let mut non_root_entries: Vec<&Entry> = Vec::new();
+
+    // First we create a node for each entry
+    for e in entries {
+        let pkg = (e.name, e.version);
+        let node = Node {
+            pkg,
+            e,
+            children: Vec::new(),
+        };
+        nodes.insert(node.pkg, Rc::new(RefCell::new(node)));
+    }
+
+    // Then we addd the children to each node
+    for e in entries {
+        let node = nodes.get(&(e.name, e.version)).unwrap();
+        e.dependencies.iter().for_each(|dep| {
+            // Dependencies are defined using a descriptor and
+            // different dependencies could resolve to the same entry
+            let resolved_dep: &Entry = pkg2entry.get(dep).unwrap();
+            let dep_node = nodes
+                .get(&(resolved_dep.name, resolved_dep.version))
+                .expect("missing node, we expected to have them all by now");
+            node.borrow_mut().children.push(dep_node.clone());
+
+            // this enty is a depedency of something else, so it's not a root entry
+            non_root_entries.push(resolved_dep);
+        });
+    }
+
+    // Create a new vector with the root entries
+    let mut roots: Vec<Rc<RefCell<Node>>> = Vec::new();
+    for e in entries {
+        if !non_root_entries.contains(&e) {
+            roots.push(nodes.get(&(e.name, e.version)).unwrap().clone());
+        }
+    }
+
+    roots
 }
 
 #[inline(always)]
@@ -504,7 +566,7 @@ struct SerializableNode<'a> {
     #[serde(skip_serializing_if = "serialize_skip_if_children_empty")]
     children: Vec<Rc<RefCell<Node<'a>>>>,
     #[serde(serialize_with = "serialize_pkg_as_string")]
-    descriptor: &'a Pkg<'a>,
+    descriptor: Pkg<'a>,
     version: &'a str,
 }
 
@@ -529,7 +591,7 @@ struct Node<'a> {
         rename(serialize = "descriptor"),
         serialize_with = "serialize_pkg_as_string"
     )]
-    pkg: &'a Pkg<'a>,
+    pkg: Pkg<'a>,
     e: &'a Entry<'a>,
 }
 
@@ -550,7 +612,7 @@ where
 fn _build_tree_with_no_duplicates<'a>(
     parent: &mut Rc<RefCell<Node<'a>>>,
     children: &[Rc<RefCell<Node<'a>>>],
-    visited: &mut HashMap<&'a Pkg<'a>, bool>,
+    visited: &mut HashMap<Pkg<'a>, bool>,
 ) {
     for node in children.iter() {
         let ref_node = node.as_ref().borrow();
@@ -574,7 +636,7 @@ fn _build_tree_with_no_duplicates<'a>(
                 .children
                 .is_empty();
 
-        if next_child_is_leaf || !visited.contains_key(ref_node.pkg) {
+        if next_child_is_leaf || !visited.contains_key(&ref_node.pkg) {
             visited.insert(ref_node.pkg, true);
             _build_tree_with_no_duplicates(&mut new_node, &ref_node.children, visited)
         }
@@ -591,11 +653,11 @@ static ROOT_ENTRY: Entry = Entry {
 };
 
 fn build_tree_with_no_duplicates<'a>(children: &[Rc<RefCell<Node<'a>>>]) -> Rc<RefCell<Node<'a>>> {
-    let mut visited: HashMap<&Pkg, bool> = HashMap::default();
+    let mut visited: HashMap<Pkg, bool> = HashMap::default();
 
     let mut root = Rc::new(RefCell::new(Node {
         children: Vec::new(),
-        pkg: &ROOT_PKG,
+        pkg: ROOT_PKG,
         e: &ROOT_ENTRY,
     }));
 
@@ -620,7 +682,7 @@ fn convert_paths_to_tree<'a>(
                 if !nodes.contains_key(pkg) {
                     let node = Rc::new(RefCell::new(Node {
                         children: Vec::new(),
-                        pkg,
+                        pkg: **pkg,
                         e: pkg2entry.get(pkg).unwrap(),
                     }));
 
@@ -635,7 +697,7 @@ fn convert_paths_to_tree<'a>(
                 let node = nodes.entry(pkg).or_insert_with(|| {
                     Rc::new(RefCell::new(Node {
                         children: Vec::new(),
-                        pkg,
+                        pkg: **pkg,
                         e: pkg2entry.get(pkg).unwrap(),
                     }))
                 });
@@ -650,7 +712,7 @@ fn convert_paths_to_tree<'a>(
                     .borrow_mut()
                     .children
                     .iter()
-                    .all(|c| &c.borrow_mut().pkg != pkg)
+                    .all(|c| &&c.borrow_mut().pkg != pkg)
                 {
                     parent.borrow_mut().children.push(cloned_node);
                 }

@@ -1,4 +1,5 @@
 # yarn-why
+
 [![version](https://img.shields.io/crates/v/yarn-why.svg)](https://crates.io/crates/yarn-why)
 ![ci](https://github.com/riquito/yarn-why/actions/workflows/ci.yml/badge.svg)
 [![license](https://img.shields.io/crates/l/yarn-why.svg)](https://crates.io/crates/yarn-why)
@@ -39,6 +40,7 @@ OPTIONS:
     -V, --version            Prints version information
     -y, --yarn-lock-file     Path to a yarn.lock file to parse
         --print-records      Prints every dependency as JSONL
+        --full-tree          Render the full tree of dependencies
 
 
 ARGS:
@@ -79,6 +81,7 @@ Similar search, but filtered for `fs-minipass --filter '>=3.0, <4.0.0'`
 ```
 
 Defaults:
+
 - branches are truncated at 10 levels depth (see -d / -D to change it).
 - branches already printed are not printed again (search up in the tree for their output). You can get the full tree with --no-dedup.
 - circular dependencies are truncated after 20 iterations (set ENV MAX_PKG_VISITS to change it).
@@ -86,6 +89,7 @@ Defaults:
 ## Benchmarks
 
 Benchmarks run on Framework Laptop 13 AMD Ryzen 7 7840U
+
 - node 21.7.1
 - yarn 1.22.22 / yarn 4.1.0
 - using [renovate 35.45.5 yarn.lock file](https://github.com/renovatebot/renovate/blob/32.45.5/yarn.lock) (v1 first, then updating it)
