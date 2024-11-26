@@ -67,7 +67,7 @@ struct Opt {
     yarn_lock_path: Option<PathBuf>,
     filter: Option<VersionReq>,
     print_records: bool,
-    tree: bool,
+    full_tree: bool,
 }
 
 type Pkg<'a> = (&'a str, &'a str);
@@ -209,7 +209,7 @@ fn main() -> Result<()> {
             .or(Some(10)),
         yarn_lock_path: pargs.opt_value_from_os_str(["-y", "--yarn-lock-path"], parse_path)?,
         print_records: pargs.contains("--print-records"),
-        tree: pargs.contains("--tree"),
+        full_tree: pargs.contains("--full-tree"),
         query: pargs.free_from_str().ok(),
         filter: pargs
             .opt_free_from_str::<String>()?
@@ -218,7 +218,7 @@ fn main() -> Result<()> {
             .transpose()?,
     };
 
-    if args.print_records || args.tree {
+    if args.print_records || args.full_tree {
         // Set a dummy query, won't be used.
         // It's an hack until I find the time and will to refactor
         // the code to better separate print_records.
@@ -361,7 +361,7 @@ fn main() -> Result<()> {
         }
     });
 
-    let paths = if args.tree {
+    let paths = if args.full_tree {
         Vec::new()
     } else {
         let mut paths = why(queries, &pkg2parents, &entries);
@@ -385,7 +385,7 @@ fn main() -> Result<()> {
         paths
     };
 
-    let owned_tree = if args.tree {
+    let owned_tree = if args.full_tree {
         full_tree(&entries, &pkg2entry)
     } else {
         let sliced_paths = paths.as_slice();

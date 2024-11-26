@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- add --full-tree option
+
 ## [1.1.0] - 2024-09-20
 
 - yarn-why now takes a second optional argument to limit which versions to search for
