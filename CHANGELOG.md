@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- consider resolutions field in --full-tree
+
 ## [1.2.0] - 2024-11-25
 
 - add --full-tree option
