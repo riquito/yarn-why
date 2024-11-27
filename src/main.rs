@@ -449,7 +449,13 @@ fn full_tree<'a>(
         e.dependencies.iter().for_each(|dep| {
             // Dependencies are defined using a descriptor and
             // different dependencies could resolve to the same entry
-            let resolved_dep: &Entry = pkg2entry.get(dep).unwrap();
+            let resolved_dep: &Entry = pkg2entry.get(dep).unwrap_or_else(|| {
+                // They must have used `resolutions` so there's no entry.
+                // We should be able to find a single entry with the same name but
+                // a different version.
+                let resolved_pkg = pkg2entry.keys().find(|(name, _)| name == &dep.0).unwrap();
+                pkg2entry.get(resolved_pkg).unwrap()
+            });
             let dep_node = nodes
                 .get(&(resolved_dep.name, resolved_dep.version))
                 .expect("missing node, we expected to have them all by now");
