@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [1.2.1] - 2024-11-26
+
 - consider resolutions field in --full-tree
 
 ## [1.2.0] - 2024-11-25
