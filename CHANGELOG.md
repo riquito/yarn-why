@@ -2,7 +2,8 @@
 
 ## [Unreleased]
 
-- consider resolutions field in --full-tree
+- update yarn-lock-parser to 0.14.0 (no user visible changes)
+- apply resolutions field in --full-tree
 
 ## [1.2.0] - 2024-11-25
 
