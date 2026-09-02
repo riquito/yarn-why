@@ -1,5 +1,5 @@
 use anyhow::{anyhow, Result};
-use once_cell::sync::OnceCell;
+use once_cell::sync::{Lazy, OnceCell};
 use records::iter_flat_dependencies;
 use semver::{Version, VersionReq};
 use serde::ser::SerializeTuple;
@@ -71,6 +71,36 @@ struct Opt {
 }
 
 type Pkg<'a> = (&'a str, &'a str);
+
+/// Normalize the version part of an entry descriptor.
+///
+/// Up to yarn-lock-parser 0.7 the parser did this itself, since 0.8 it
+/// returns the descriptor verbatim, so we keep doing it here to preserve
+/// the expected output.
+///
+/// The version is what comes after the last `@` (aliased dependencies embed
+/// another `name@version` pair, e.g. `foo@npm:bar@^1.0.0`) minus the
+/// protocol, if any (e.g. `npm:^1.0.0` => `^1.0.0`, `workspace:.` => `.`).
+fn strip_descriptor_protocol(version: &str) -> &str {
+    let version = match version.rfind('@') {
+        Some(idx) => &version[idx + 1..],
+        None => version,
+    };
+
+    match version.rfind(':') {
+        Some(idx) => &version[idx + 1..],
+        None => version,
+    }
+}
+
+/// Normalize the version part of a dependency of an entry.
+///
+/// Same story as [`strip_descriptor_protocol`], but here the parser used to
+/// drop just the aliased package name (e.g. `npm:bar@^1.0.0` => `^1.0.0`),
+/// leaving any protocol in place (it's stripped further down).
+fn strip_dependency_alias(version: &str) -> &str {
+    version.rsplit_once('@').map_or(version, |(_, v)| v)
+}
 
 /// get_parents(...) returns the parent packages for a
 /// given package by looking it up in a hashmap.
@@ -281,7 +311,7 @@ fn main() -> Result<()> {
 
     let stdout = std::io::stdout();
     let mut stdout = std::io::BufWriter::with_capacity(32 * 1024, stdout.lock());
-    let mut entries = parse_str(std::str::from_utf8(&yarn_lock_text)?)?;
+    let mut entries = parse_str(std::str::from_utf8(&yarn_lock_text)?)?.entries;
 
     if args.filter.is_some() {
         let req = args.filter.as_ref().unwrap();
@@ -303,6 +333,8 @@ fn main() -> Result<()> {
     // of yarn-why, so we must drop them.
     entries.retain_mut(|e| {
         e.dependencies.retain_mut(|dep| {
+            *dep = (dep.0, strip_dependency_alias(dep.1));
+
             // XXX here we just check for npm: but there are other protocols
             // out there. In general, we should stop stripping it in yarn-lock-parser
             *dep = (dep.0, dep.1.strip_prefix("npm:").unwrap_or(dep.1));
@@ -316,6 +348,8 @@ fn main() -> Result<()> {
         });
 
         e.descriptors.retain_mut(|descriptor| {
+            *descriptor = (descriptor.0, strip_descriptor_protocol(descriptor.1));
+
             // hacky way to detect patch protocol (we must drop them from entries
             // otherwise we will get duplicates)
             !descriptor.1.contains('#') || descriptor.1.contains("git")
@@ -650,13 +684,9 @@ fn _build_tree_with_no_duplicates<'a>(
 }
 
 static ROOT_PKG: (&str, &str) = ("", "");
-static ROOT_ENTRY: Entry = Entry {
-    name: "",
-    version: "",
-    integrity: "",
-    dependencies: Vec::new(),
-    descriptors: Vec::new(),
-};
+// `Entry` is #[non_exhaustive], so we can't build it with a struct literal
+// (and `Default::default()` is not const).
+static ROOT_ENTRY: Lazy<Entry> = Lazy::new(Entry::default);
 
 fn build_tree_with_no_duplicates<'a>(children: &[Rc<RefCell<Node<'a>>>]) -> Rc<RefCell<Node<'a>>> {
     let mut visited: HashMap<Pkg, bool> = HashMap::default();
@@ -778,6 +808,28 @@ mod tests {
         pkg2parents.insert(&PKG_D, d_parents);
         pkg2parents.insert(&PKG_B, b_parents);
         pkg2parents
+    }
+
+    #[test]
+    fn strip_descriptor_protocol_works() {
+        assert_eq!(strip_descriptor_protocol("^1.0.0"), "^1.0.0");
+        assert_eq!(strip_descriptor_protocol("npm:^1.0.0"), "^1.0.0");
+        assert_eq!(
+            strip_descriptor_protocol("1.2.3 || ^2.0.0"),
+            "1.2.3 || ^2.0.0"
+        );
+        assert_eq!(strip_descriptor_protocol("workspace:."), ".");
+        // aliased dependency, the version is the one of the aliased package
+        assert_eq!(strip_descriptor_protocol("npm:bar@^1.0.0"), "^1.0.0");
+    }
+
+    #[test]
+    fn strip_dependency_alias_works() {
+        assert_eq!(strip_dependency_alias("^1.0.0"), "^1.0.0");
+        // the protocol is stripped later on, not here
+        assert_eq!(strip_dependency_alias("npm:^1.0.0"), "npm:^1.0.0");
+        assert_eq!(strip_dependency_alias("1.2.3 || ^2.0.0"), "1.2.3 || ^2.0.0");
+        assert_eq!(strip_dependency_alias("npm:bar@^1.0.0"), "^1.0.0");
     }
 
     #[test]
