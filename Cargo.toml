@@ -10,6 +10,11 @@ readme = "README.md"
 keywords = ["cli"]
 categories = ["command-line-utilities"]
 
+[lib]
+name = "yarn_why"
+path = "src/lib.rs"
+crate-type = ["cdylib", "rlib"]
+
 [dependencies]
 anyhow = "1.0.102"
 fxhash = "0.2.1"
