@@ -20,6 +20,9 @@ use yarn_lock_parser::{parse_str, Entry};
 
 pub mod records;
 
+#[cfg(target_arch = "wasm32")]
+pub mod wasm;
+
 extern crate fxhash;
 use fxhash::FxHashMap as HashMap;
 

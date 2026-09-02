@@ -16,6 +16,23 @@ or run
 cargo install yarn-why
 ```
 
+## Use it as a library
+
+`yarn-why` is also published to npm, compiled to WebAssembly, so you can ask
+the same questions from JavaScript in Node or in the browser:
+
+```sh
+npm install @riquito/yarn-why
+```
+
+```js
+import { why } from "@riquito/yarn-why";
+
+await why(lockfileContents, "lodash");
+```
+
+See [npm/README.md](npm/README.md) for the full API.
+
 ## Help
 
 ```
