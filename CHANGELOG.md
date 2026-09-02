@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+
+
+## [1.3.0] - 2026-09-01
+
 - publish an npm package exposing yarn-why as a library (Node and browser),
   compiled to WebAssembly
 - the engine moved into a library crate, so yarn-why can be used as a Rust

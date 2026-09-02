@@ -36,7 +36,7 @@ See [npm/README.md](npm/README.md) for the full API.
 ## Help
 
 ```
-yarn-why 1.2.0
+yarn-why 1.3.0
 
 Usage:
     yarn-why [OPTIONS] package [range] # read ./yarn.lock
