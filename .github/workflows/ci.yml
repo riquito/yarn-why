@@ -38,6 +38,34 @@ jobs:
         with:
           command: test
 
+  npm_package:
+    name: Build and test the npm package
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+          target: wasm32-unknown-unknown
+
+      - uses: Swatinem/rust-cache@v2.9.2
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - uses: jetli/wasm-pack-action@v0.4.0
+
+      - name: Build
+        run: npm/build.sh
+
+      - name: Test
+        working-directory: npm
+        run: node --test
+
   dependabot:
     needs: check_if_safe_to_merge
     runs-on: ubuntu-latest

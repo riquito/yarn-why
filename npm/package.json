@@ -1,0 +1,52 @@
+{
+  "name": "@riquito/yarn-why",
+  "version": "1.2.0",
+  "description": "Find out why a package is in your yarn.lock, in Node or the browser",
+  "keywords": [
+    "yarn",
+    "yarn.lock",
+    "dependencies",
+    "why",
+    "wasm"
+  ],
+  "homepage": "https://github.com/riquito/yarn-why",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/riquito/yarn-why.git",
+    "directory": "npm"
+  },
+  "license": "GPL-3.0-or-later",
+  "author": "Riccardo Attilio Galli <riccardo@sideralis.org>",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "imports": {
+    "#wasm-loader": {
+      "node": "./dist/load-node.js",
+      "default": "./dist/load-web.js"
+    }
+  },
+  "files": [
+    "dist",
+    "wasm/yarn_why.js",
+    "wasm/yarn_why.d.ts",
+    "wasm/yarn_why_bg.wasm"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "./build.sh",
+    "typecheck": "tsc --project tsconfig.json --noEmit",
+    "test": "node --test",
+    "prepublishOnly": "./build.sh && node --test"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.1",
+    "typescript": "^5.9.0"
+  }
+}

@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+- publish an npm package exposing yarn-why as a library (Node and browser),
+  compiled to WebAssembly
+- the engine moved into a library crate, so yarn-why can be used as a Rust
+  dependency too
 - update yarn-lock-parser to 0.14.0 (no user visible changes)
 - apply resolutions field in --full-tree
 

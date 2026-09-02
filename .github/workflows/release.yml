@@ -96,3 +96,61 @@ jobs:
           asset_name: yarn-why-macos-aarch64
           tag: ${{ github.ref }}
           overwrite: true
+
+  npm_package:
+    needs: check_if_safe
+    name: Publish the npm package
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      # so npm can attach a provenance statement to the published package
+      id-token: write
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+          target: wasm32-unknown-unknown
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org
+
+      - uses: jetli/wasm-pack-action@v0.4.0
+
+      - name: Check the versions match the tag
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          crate=$(sed -n 's/^version = "\(.*\)"/\1/p' Cargo.toml | head -1)
+          pkg=$(node -p "require('./npm/package.json').version")
+          echo "tag=$tag crate=$crate npm=$pkg"
+          if [ "$tag" != "$crate" ] || [ "$tag" != "$pkg" ]; then
+            echo "::error::tag, Cargo.toml and npm/package.json must agree"
+            exit 1
+          fi
+
+      - name: Build
+        run: npm/build.sh
+
+      - name: Test
+        working-directory: npm
+        run: node --test
+
+      - name: Publish to npm
+        working-directory: npm
+        run: npm publish --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Upload the wasm module to the release
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: npm/wasm/yarn_why_bg.wasm
+          asset_name: yarn-why.wasm
+          tag: ${{ github.ref }}
+          overwrite: true
